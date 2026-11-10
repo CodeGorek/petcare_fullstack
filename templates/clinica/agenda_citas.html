@@ -98,15 +98,20 @@
               </td>
               <td>
                 {% if c.estado == 'PROGRAMADA' %}<span class="badge badge-soft-info rounded-pill px-3">Programada</span>
-                {% elif c.estado == 'COMPLETADA' %}<span class="badge badge-soft-success rounded-pill px-3">Completada</span>
+                {% elif c.estado == 'ASISTIO' %}<span class="badge badge-soft-success rounded-pill px-3">Asistió</span>
                 {% else %}<span class="badge badge-soft-danger rounded-pill px-3">Cancelada</span>{% endif %}
               </td>
               <td class="text-end">
                 {% if c.estado == 'PROGRAMADA' %}
                 <div class="btn-group btn-group-sm">
-                  <form method="post" action="{% url 'cambiar_estado_cita' c.id 'COMPLETADA' %}">
+                  <a href="{% url 'editar_cita' c.id %}" class="btn btn-outline-primary me-1" title="Reprogramar / Editar"><i class="bi bi-pencil"></i></a>
+                  <form method="post" action="{% url 'cambiar_estado_cita' c.id 'ASISTIO' %}">
                     {% csrf_token %}
-                    <button class="btn btn-outline-success me-1" title="Completar"><i class="bi bi-check-lg"></i></button>
+                    <button class="btn btn-outline-success me-1" title="Marcar Asistió">Asistió</button>
+                  </form>
+                  <form method="post" action="{% url 'cambiar_estado_cita' c.id 'NO_ASISTIO' %}">
+                    {% csrf_token %}
+                    <button class="btn btn-outline-warning me-1" title="Marcar No Asistió">No Asistió</button>
                   </form>
                   <form method="post" action="{% url 'cambiar_estado_cita' c.id 'CANCELADA' %}">
                     {% csrf_token %}

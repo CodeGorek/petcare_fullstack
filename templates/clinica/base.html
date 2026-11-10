@@ -248,6 +248,11 @@
       </a>
     </li>
     <li>
+      <a href="{% url 'farmacia_fefo' %}" class="sidebar-link {% if request.resolver_match.url_name == 'farmacia_fefo' %}active{% endif %}">
+        <i class="bi bi-capsule-pill"></i> <span>Farmacia (Norma FEFO)</span>
+      </a>
+    </li>
+    <li>
       <a href="{% url 'recordatorios_vacunas' %}" class="sidebar-link {% if request.resolver_match.url_name == 'recordatorios_vacunas' %}active{% endif %}">
         <i class="bi bi-shield-plus"></i> <span>Vacunas y Alertas</span>
       </a>
@@ -358,6 +363,44 @@
       });
     });
   }
+</script>
+
+<script>
+  // Auto-formateo y validación matemática Módulo 11 para RUT Chileno en todos los formularios
+  function validarRutModulo11(rutCompleto) {
+    rutCompleto = rutCompleto.replace(/\./g, '').replace(/\s+/g, '').toUpperCase();
+    if (!/^\d{7,8}-[\dK]$/.test(rutCompleto)) return false;
+    const partes = rutCompleto.split('-');
+    const cuerpo = partes[0];
+    const dv = partes[1];
+    let suma = 0, multiplo = 2;
+    for (let i = cuerpo.length - 1; i >= 0; i--) {
+      suma += parseInt(cuerpo.charAt(i), 10) * multiplo;
+      multiplo = multiplo === 7 ? 2 : multiplo + 1;
+    }
+    const resto = 11 - (suma % 11);
+    const dvEsperado = resto === 11 ? '0' : (resto === 10 ? 'K' : resto.toString());
+    return dv === dvEsperado;
+  }
+
+  document.querySelectorAll('.rut-input, input[name="rut"]').forEach(input => {
+    input.addEventListener('input', function() {
+      let valor = this.value.replace(/[^0-9kK]/g, '').toUpperCase();
+      if (valor.length > 1) {
+        valor = valor.slice(0, -1) + '-' + valor.slice(-1);
+      }
+      this.value = valor;
+      if (valor.length >= 9 && validarRutModulo11(valor)) {
+        this.setCustomValidity('');
+        this.classList.remove('is-invalid');
+        this.classList.add('is-valid');
+      } else {
+        this.setCustomValidity('RUT inválido según algoritmo Módulo 11. Ejemplo válido: 18456789-2');
+        this.classList.remove('is-valid');
+        this.classList.add('is-invalid');
+      }
+    });
+  });
 </script>
 </body>
 </html>

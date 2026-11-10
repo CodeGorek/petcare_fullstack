@@ -2,10 +2,19 @@
 {% block content %}
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
   <div>
-    <h4 class="fw-bold mb-1">Expediente y Fichas Clínicas Digitales</h4>
-    <p class="text-muted small mb-0">Registro de signos vitales, diagnósticos, recetas farmacológicas y órdenes de exámenes.</p>
+    <h4 class="fw-bold mb-1">Expediente Clínico y Dispensación bajo Norma FEFO</h4>
+    <p class="text-muted small mb-0">Cada ficha permite dispensar fármacos priorizando automáticamente el lote próximo a vencer (First Expired, First Out) e imprimir solo la ficha seleccionada.</p>
   </div>
+  <a href="{% url 'farmacia_fefo' %}" class="btn btn-sm btn-outline-dark fw-semibold">
+    <i class="bi bi-box-seam me-1"></i> Ver Stock Farmacia FEFO
+  </a>
 </div>
+
+{% if form.errors %}
+<div class="alert alert-danger border-0 rounded-3 shadow-sm">
+  <strong>Error de validación clínica o stock FEFO:</strong> {{ form.errors }}
+</div>
+{% endif %}
 
 <div class="row g-4">
   <div class="col-lg-5">
@@ -14,18 +23,35 @@
       <form method="post">
         {% csrf_token %}
         <div class="row g-3">
-          <div class="col-md-6"><label class="form-label">Paciente</label>{{ form.mascota }}</div>
+          <div class="col-md-6"><label class="form-label">Paciente Activo</label>{{ form.mascota }}</div>
           <div class="col-md-6"><label class="form-label">Veterinario Tratante</label>{{ form.veterinario }}</div>
-          <div class="col-12"><label class="form-label">Cita Asociada (Opcional - Se marcará completada)</label>{{ form.cita }}</div>
+          <div class="col-12"><label class="form-label">Cita Asociada (Opcional — Se marcará como ASISTIÓ)</label>{{ form.cita }}</div>
           <div class="col-md-6"><label class="form-label">Peso en Consulta (kg)</label>{{ form.peso_registrado }}</div>
-          <div class="col-md-6"><label class="form-label">Temperatura Corporal (°C)</label>{{ form.temperatura_c }}</div>
+          <div class="col-md-6"><label class="form-label">Temperatura (35°C - 43°C)</label>{{ form.temperatura_c }}</div>
           <div class="col-12"><label class="form-label">Diagnóstico Clínico</label>{{ form.diagnostico }}</div>
           <div class="col-12"><label class="form-label">Tratamiento / Procedimiento</label>{{ form.tratamiento }}</div>
-          <div class="col-12"><label class="form-label">Receta Médica / Prescripción</label>{{ form.receta_medica }}</div>
+
+          <div class="col-12">
+            <div class="p-3 rounded-3" style="background:#f0fdf4; border:1px solid #bbf7d0;">
+              <div class="small fw-bold text-success mb-2"><i class="bi bi-shield-check me-1"></i>Dispensación Farmacéutica (Ordenada por Norma FEFO)</div>
+              <div class="row g-2">
+                <div class="col-md-9">
+                  <label class="form-label small">Lote Sugerido (Vencimiento más próximo primero)</label>
+                  {{ form.medicamento_fefo }}
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label small">Cantidad</label>
+                  {{ form.cantidad_dispensada }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12"><label class="form-label">Receta Médica / Indicaciones al Tutor</label>{{ form.receta_medica }}</div>
           <div class="col-12"><label class="form-label">Exámenes Complementarios Solicitados</label>{{ form.examenes_solicitados }}</div>
           <div class="col-12 pt-2">
             <button type="submit" class="btn btn-emerald w-100 py-2">
-              <i class="bi bi-save2 me-1"></i> Guardar Ficha y Actualizar Peso
+              <i class="bi bi-save2 me-1"></i> Emitir Ficha y Descontar Lote FEFO
             </button>
           </div>
         </div>
@@ -37,23 +63,22 @@
     {% for f in fichas %}
     <div class="saas-card p-4 mb-3 searchable-card">
       <div class="d-flex flex-wrap justify-content-between align-items-center border-bottom pb-3 mb-3">
-        <div class="d-flex align-items-center gap-3">
-          <div class="kpi-icon badge-soft-info"><i class="bi bi-clipboard2-pulse"></i></div>
-          <div>
-            <span class="badge bg-dark mb-1">FICHA CLÍNICA #{{ f.id }}</span>
-            <h5 class="fw-bold mb-0">{{ f.mascota.nombre }} <small class="text-muted fw-normal fs-6">({{ f.mascota.get_especie_display }} • Tutor: {{ f.mascota.tutor.nombre_completo }})</small></h5>
-          </div>
+        <div>
+          <span class="badge bg-dark mb-1">FICHA CLÍNICA #{{ f.id }}</span>
+          <h5 class="fw-bold mb-0">🐾 {{ f.mascota.nombre }} <small class="text-muted fw-normal fs-6">({{ f.mascota.tutor.nombre_completo }})</small></h5>
         </div>
-        <div class="text-end">
-          <div class="fw-semibold small">Dr(a). {{ f.veterinario.nombre }}</div>
-          <small class="text-muted">{{ f.fecha_atencion|date:"d/m/Y H:i" }}</small>
+        <div class="d-flex align-items-center gap-2">
+          <a href="{% url 'imprimir_ficha_individual' f.id %}" target="_blank" class="btn btn-sm btn-emerald">
+            <i class="bi bi-printer-fill me-1"></i> Imprimir Solo Esta Ficha
+          </a>
         </div>
       </div>
 
       <div class="d-flex flex-wrap gap-2 mb-3">
-        <span class="badge bg-light text-dark border px-3 py-2"><i class="bi bi-speedometer2 text-primary me-1"></i> Peso: <strong>{{ f.peso_registrado }} kg</strong></span>
-        <span class="badge bg-light text-dark border px-3 py-2"><i class="bi bi-thermometer-half text-danger me-1"></i> Temperatura: <strong>{{ f.temperatura_c }} °C</strong></span>
-        {% if f.cita %}<span class="badge badge-soft-success px-3 py-2">Cita #{{ f.cita.id }} Completada</span>{% endif %}
+        <span class="badge bg-light text-dark border px-3 py-2">Fecha: {{ f.fecha_atencion|date:"d/m/Y H:i" }}</span>
+        <span class="badge bg-light text-dark border px-3 py-2">Dr(a). {{ f.veterinario.nombre }}</span>
+        <span class="badge bg-light text-dark border px-3 py-2">Peso: <strong>{{ f.peso_registrado }} kg</strong></span>
+        <span class="badge bg-light text-dark border px-3 py-2">Temp: <strong>{{ f.temperatura_c }} °C</strong></span>
       </div>
 
       <div class="row g-3">
@@ -69,21 +94,19 @@
             <div class="small">{{ f.tratamiento }}</div>
           </div>
         </div>
-        {% if f.receta_medica %}
+
+        {% if f.medicamento_fefo or f.receta_medica %}
         <div class="col-12">
           <div class="p-3 rounded-3" style="background:#ecfdf5; border:1px solid #a7f3d0;">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-              <span class="small fw-bold text-success"><i class="bi bi-capsule-pill me-1"></i> RECETA MÉDICA VETERINARIA</span>
-              <button type="button" class="btn btn-sm btn-outline-success py-0" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button>
+            {% if f.medicamento_fefo %}
+            <div class="small fw-bold text-success mb-1">
+              <i class="bi bi-box2-heart me-1"></i> DISPENSACIÓN NORMA FEFO: {{ f.medicamento_fefo.nombre }} ({{ f.cantidad_dispensada }} u.)
+              — <span class="badge bg-success">Lote {{ f.medicamento_fefo.codigo_lote }} | Vence {{ f.medicamento_fefo.fecha_vencimiento|date:"d/m/Y" }}</span>
             </div>
-            <div class="small text-dark">{{ f.receta_medica }}</div>
-          </div>
-        </div>
-        {% endif %}
-        {% if f.examenes_solicitados %}
-        <div class="col-12">
-          <div class="p-2 px-3 rounded-3 bg-warning bg-opacity-10 border border-warning border-opacity-25 small">
-            <strong><i class="bi bi-eyedropper me-1"></i> Exámenes Solicitados:</strong> {{ f.examenes_solicitados }}
+            {% endif %}
+            {% if f.receta_medica %}
+            <div class="small text-dark"><strong>Receta / Posología:</strong> {{ f.receta_medica }}</div>
+            {% endif %}
           </div>
         </div>
         {% endif %}

@@ -2,32 +2,33 @@
 {% block content %}
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
   <div>
-    <h4 class="fw-bold mb-1">Módulo de Recordatorios y Esquema de Vacunación</h4>
-    <p class="text-muted small mb-0">Al marcar una vacuna como aplicada, el motor programa automáticamente el refuerzo anual (+365 días).</p>
+    <h4 class="fw-bold mb-1">Control de Asistencia a Vacunaciones, Exámenes y Controles</h4>
+    <p class="text-muted small mb-0">Cada citación incluye <strong>Fecha y Hora exacta</strong> y registra si el paciente <strong>Asistió</strong> o <strong>No Asistió</strong>.</p>
   </div>
 </div>
 
 <div class="row g-4">
   <div class="col-lg-4">
     <div class="saas-card p-4">
-      <h6 class="fw-bold mb-3"><i class="bi bi-bell-fill text-warning me-2"></i>Programar Vacuna o Control</h6>
+      <h6 class="fw-bold mb-3"><i class="bi bi-calendar2-plus text-success me-2"></i>Programar Vacuna, Examen o Control</h6>
       <form method="post">
         {% csrf_token %}
         <div class="row g-3">
-          <div class="col-12"><label class="form-label">Paciente</label>{{ form.mascota }}</div>
-          <div class="col-md-6"><label class="form-label">Tipo Preventivo</label>{{ form.tipo }}</div>
+          <div class="col-12"><label class="form-label">Paciente Activo</label>{{ form.mascota }}</div>
+          <div class="col-12"><label class="form-label">Tipo de Citación</label>{{ form.tipo }}</div>
           <div class="col-md-6"><label class="form-label">Fecha Programada</label>{{ form.fecha_programada }}</div>
-          <div class="col-12"><label class="form-label">Nombre de Vacuna o Control</label>{{ form.nombre_vacuna_control }}</div>
-          <div class="col-md-6"><label class="form-label">Estado Inicial</label>{{ form.estado }}</div>
-          <div class="col-md-6 d-flex align-items-end">
+          <div class="col-md-6"><label class="form-label">Hora de Citación</label>{{ form.hora_programada }}</div>
+          <div class="col-12"><label class="form-label">Vacuna, Examen o Control</label>{{ form.nombre_vacuna_control }}</div>
+          <div class="col-md-7"><label class="form-label">Estado de Asistencia</label>{{ form.estado }}</div>
+          <div class="col-md-5 d-flex align-items-end">
             <div class="form-check mb-2">
-              {{ form.notificado }} <label class="form-check-label small fw-semibold">Tutor Notificado</label>
+              {{ form.notificado }} <label class="form-check-label small fw-semibold">Notificado</label>
             </div>
           </div>
-          <div class="col-12"><label class="form-label">Observaciones</label>{{ form.observaciones }}</div>
+          <div class="col-12"><label class="form-label">Observaciones / Preparación</label>{{ form.observaciones }}</div>
           <div class="col-12 pt-2">
             <button type="submit" class="btn btn-emerald w-100 py-2">
-              <i class="bi bi-calendar-check me-1"></i> Programar Recordatorio
+              <i class="bi bi-check2-circle me-1"></i> Guardar Citación con Hora
             </button>
           </div>
         </div>
@@ -38,52 +39,57 @@
   <div class="col-lg-8">
     <div class="saas-card">
       <div class="saas-card-header">
-        <h6 class="fw-bold mb-0"><i class="bi bi-shield-check text-success me-2"></i>Calendario Preventivo e Inmunización ({{ recordatorios|length }})</h6>
+        <h6 class="fw-bold mb-0"><i class="bi bi-clipboard2-check text-primary me-2"></i>Registro de Asistencia con Fecha y Hora ({{ recordatorios|length }})</h6>
       </div>
       <div class="table-responsive">
         <table class="table table-saas mb-0">
           <thead>
-            <tr><th>Paciente y Contacto Tutor</th><th>Tipo / Vacuna</th><th>Fecha Límite</th><th>Semáforo Clínico</th><th class="text-end">Acción</th></tr>
+            <tr><th>Paciente / Tutor</th><th>Tipo / Prestación</th><th>Fecha y Hora</th><th>Estado Asistencia</th><th class="text-end">Marcar Asistencia</th></tr>
           </thead>
           <tbody>
           {% for r in recordatorios %}
             <tr>
               <td>
                 <div class="fw-bold">{{ r.mascota.nombre }}</div>
-                <small class="text-muted"><i class="bi bi-envelope"></i> {{ r.mascota.tutor.email }} • {{ r.mascota.tutor.telefono }}</small>
+                <small class="text-muted">{{ r.mascota.tutor.nombre_completo }} • {{ r.mascota.tutor.telefono }}</small>
               </td>
               <td>
                 <span class="badge bg-light text-dark border">{{ r.get_tipo_display }}</span>
                 <div class="fw-semibold mt-1">{{ r.nombre_vacuna_control }}</div>
-                {% if r.observaciones %}<small class="text-muted">{{ r.observaciones }}</small>{% endif %}
               </td>
-              <td class="fw-semibold">{{ r.fecha_programada|date:"d/m/Y" }}</td>
               <td>
-                {% if r.nivel_alerta == 'VENCIDO' %}
-                  <span class="badge badge-soft-danger rounded-pill px-3 py-1"><i class="bi bi-exclamation-octagon me-1"></i>VENCIDO</span>
-                {% elif r.nivel_alerta == 'PROXIMO' %}
-                  <span class="badge badge-soft-warning rounded-pill px-3 py-1"><i class="bi bi-clock me-1"></i>PRÓXIMO (&le;7d)</span>
-                {% elif r.nivel_alerta == 'COMPLETADO' %}
-                  <span class="badge badge-soft-success rounded-pill px-3 py-1"><i class="bi bi-check-all me-1"></i>APLICADA</span>
+                <div class="fw-bold">{{ r.fecha_programada|date:"d/m/Y" }}</div>
+                <span class="badge bg-dark font-monospace">{{ r.hora_programada|time:"H:i" }} hrs</span>
+              </td>
+              <td>
+                {% if r.estado_asistencia == 'ASISTIO' %}
+                  <span class="badge badge-soft-success rounded-pill px-3 py-1"><i class="bi bi-check-circle-fill me-1"></i>ASISTIÓ</span>
+                {% elif r.estado_asistencia == 'NO_ASISTIO' %}
+                  <span class="badge badge-soft-danger rounded-pill px-3 py-1"><i class="bi bi-x-circle-fill me-1"></i>NO ASISTIÓ</span>
+                {% elif r.estado_asistencia == 'PROXIMO' %}
+                  <span class="badge badge-soft-warning rounded-pill px-3 py-1"><i class="bi bi-clock-fill me-1"></i>PRÓXIMO (&le;7d)</span>
                 {% else %}
-                  <span class="badge badge-soft-info rounded-pill px-3 py-1">PROGRAMADO</span>
+                  <span class="badge badge-soft-info rounded-pill px-3 py-1">PENDIENTE</span>
                 {% endif %}
               </td>
               <td class="text-end">
-                {% if r.estado == 'PENDIENTE' %}
-                <form method="post" action="{% url 'marcar_recordatorio_aplicado' r.id %}">
-                  {% csrf_token %}
-                  <button class="btn btn-sm btn-emerald">
-                    <i class="bi bi-check2-circle me-1"></i> Aplicar Dosis
-                  </button>
-                </form>
-                {% else %}
-                <span class="text-muted small"><i class="bi bi-check2"></i> Notificado</span>
-                {% endif %}
+                <div class="d-flex justify-content-end gap-1">
+                  <a href="https://wa.me/{{ r.mascota.tutor.telefono|cut:'+'|cut:' ' }}?text=Hola%20{{ r.mascota.tutor.nombre_completo }},%20recordatorio%20PetCare%20para%20{{ r.mascota.nombre }}:%20{{ r.nombre_vacuna_control }}%20el%20{{ r.fecha_programada|date:'d/m/Y' }}%20a%20las%20{{ r.hora_programada|time:'H:i' }}%20hrs." target="_blank" class="btn btn-sm btn-outline-success" title="Avisar por WhatsApp">
+                    <i class="bi bi-whatsapp"></i>
+                  </a>
+                  <form method="post" action="{% url 'actualizar_asistencia_recordatorio' r.id 'ASISTIO' %}">
+                    {% csrf_token %}
+                    <button class="btn btn-sm btn-emerald">Asistió</button>
+                  </form>
+                  <form method="post" action="{% url 'actualizar_asistencia_recordatorio' r.id 'NO_ASISTIO' %}">
+                    {% csrf_token %}
+                    <button class="btn btn-sm btn-outline-danger">No Asistió</button>
+                  </form>
+                </div>
               </td>
             </tr>
           {% empty %}
-            <tr><td colspan="5" class="text-center py-4 text-muted">Sin recordatorios registrados.</td></tr>
+            <tr><td colspan="5" class="text-center py-4 text-muted">Sin registros.</td></tr>
           {% endfor %}
           </tbody>
         </table>

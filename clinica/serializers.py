@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Tutor, Mascota, Veterinario, CitaMedica, FichaClinica, RecordatorioVacuna
+from .models import Tutor, Mascota, Veterinario, LoteMedicamento, CitaMedica, FichaClinica, RecordatorioVacuna
 
 
 class TutorSerializer(serializers.ModelSerializer):
@@ -22,6 +22,14 @@ class VeterinarioSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class LoteMedicamentoSerializer(serializers.ModelSerializer):
+    estado_fefo = serializers.ReadOnlyField()
+
+    class Meta:
+        model = LoteMedicamento
+        fields = '__all__'
+
+
 class CitaMedicaSerializer(serializers.ModelSerializer):
     mascota_nombre = serializers.CharField(source='mascota.nombre', read_only=True)
     veterinario_nombre = serializers.CharField(source='veterinario.nombre', read_only=True)
@@ -30,17 +38,11 @@ class CitaMedicaSerializer(serializers.ModelSerializer):
         model = CitaMedica
         fields = '__all__'
 
-    def validate(self, data):
-        instancia = CitaMedica(**data)
-        if self.instance:
-            instancia.pk = self.instance.pk
-        instancia.clean()
-        return data
-
 
 class FichaClinicaSerializer(serializers.ModelSerializer):
     mascota_nombre = serializers.CharField(source='mascota.nombre', read_only=True)
     veterinario_nombre = serializers.CharField(source='veterinario.nombre', read_only=True)
+    lote_fefo_info = serializers.CharField(source='medicamento_fefo.codigo_lote', read_only=True)
 
     class Meta:
         model = FichaClinica
@@ -49,8 +51,7 @@ class FichaClinicaSerializer(serializers.ModelSerializer):
 
 class RecordatorioVacunaSerializer(serializers.ModelSerializer):
     mascota_nombre = serializers.CharField(source='mascota.nombre', read_only=True)
-    tutor_email = serializers.CharField(source='mascota.tutor.email', read_only=True)
-    nivel_alerta = serializers.ReadOnlyField()
+    estado_asistencia = serializers.ReadOnlyField()
 
     class Meta:
         model = RecordatorioVacuna
