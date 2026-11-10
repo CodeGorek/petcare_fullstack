@@ -1,0 +1,95 @@
+{% extends "clinica/base.html" %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Gestión de Cuentas Profesionales y Control de Acceso (RBAC)</h4>
+    <p class="text-muted small mb-0">Módulo exclusivo para Root. Crea cuentas para médicos veterinarios y personal clínico sin acceso a DRF ni Django Admin.</p>
+  </div>
+  <span class="badge bg-dark px-3 py-2 rounded-pill"><i class="bi bi-shield-lock-fill text-warning me-1"></i> Nivel de Acceso: ROOT</span>
+</div>
+
+{% if form.errors %}
+<div class="alert alert-danger border-0 rounded-3 shadow-sm">
+  <strong>Error al crear la cuenta:</strong> {{ form.errors }}
+</div>
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="saas-card p-4">
+      <h6 class="fw-bold mb-3"><i class="bi bi-person-plus-fill text-success me-2"></i>Crear Cuenta de Usuario Profesional</h6>
+      <form method="post">
+        {% csrf_token %}
+        <div class="row g-3">
+          <div class="col-md-6"><label class="form-label">{{ form.username.label }}</label>{{ form.username }}</div>
+          <div class="col-md-6"><label class="form-label">{{ form.password.label }}</label>{{ form.password }}</div>
+          <div class="col-md-7"><label class="form-label">{{ form.nombre_completo.label }}</label>{{ form.nombre_completo }}</div>
+          <div class="col-md-5"><label class="form-label">{{ form.rut.label }}</label>{{ form.rut }}</div>
+          <div class="col-12"><label class="form-label">{{ form.email.label }}</label>{{ form.email }}</div>
+          <div class="col-md-6"><label class="form-label">{{ form.rol.label }}</label>{{ form.rol }}</div>
+          <div class="col-md-6"><label class="form-label">{{ form.especialidad.label }}</label>{{ form.especialidad }}</div>
+          <div class="col-md-6"><label class="form-label">{{ form.hora_inicio.label }}</label>{{ form.hora_inicio }}</div>
+          <div class="col-md-6"><label class="form-label">{{ form.hora_fin.label }}</label>{{ form.hora_fin }}</div>
+          <div class="col-12 pt-2">
+            <button type="submit" class="btn btn-emerald w-100 py-2">
+              <i class="bi bi-key-fill me-1"></i> Habilitar Cuenta Profesional
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="saas-card">
+      <div class="saas-card-header">
+        <h6 class="fw-bold mb-0"><i class="bi bi-people-fill text-primary me-2"></i>Usuarios con Acceso al Sistema ({{ usuarios|length }})</h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-saas mb-0">
+          <thead>
+            <tr><th>Usuario</th><th>Nombre / Correo</th><th>Nivel de Permisos</th><th>Acceso Backend</th><th class="text-end">Acción</th></tr>
+          </thead>
+          <tbody>
+          {% for u in usuarios %}
+            <tr>
+              <td class="fw-bold font-monospace">{{ u.username }}</td>
+              <td>
+                <div class="fw-semibold">{{ u.first_name|default:"Administrador Sistema" }}</div>
+                <small class="text-muted">{{ u.email }}</small>
+              </td>
+              <td>
+                {% if u.is_superuser %}
+                  <span class="badge badge-soft-danger rounded-pill px-3"><i class="bi bi-shield-shaded me-1"></i>Root / Superusuario</span>
+                {% else %}
+                  <span class="badge badge-soft-success rounded-pill px-3"><i class="bi bi-person-badge me-1"></i>Profesional Clínico</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if u.is_superuser %}
+                  <small class="text-success fw-semibold">Total (App + API + Admin)</small>
+                {% else %}
+                  <small class="text-secondary">Solo Interfaz Clínica</small>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                {% if not u.is_superuser %}
+                <form method="post" action="{% url 'eliminar_usuario' u.id %}" class="d-inline">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Revocar acceso a {{ u.username }}?')">
+                    <i class="bi bi-trash3"></i>
+                  </button>
+                </form>
+                {% else %}
+                <span class="badge bg-light text-muted border">Protegido</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

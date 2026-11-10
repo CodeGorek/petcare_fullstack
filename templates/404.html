@@ -1,0 +1,38 @@
+{% extends "clinica/base.html" %}
+{% block content %}
+<div class="row justify-content-center align-items-center" style="min-height: 72vh;">
+  <div class="col-md-7 col-lg-5">
+    <div class="saas-card p-5 text-center">
+      <div class="mx-auto mb-3 d-flex align-items-center justify-content-center rounded-circle badge-soft-danger" style="width:76px; height:76px; font-size:2.2rem;">
+        <i class="bi bi-compass"></i>
+      </div>
+      <span class="badge bg-dark font-monospace px-3 py-1 mb-2">HTTP ERROR 404</span>
+      <h3 class="fw-bold mb-2">Página o Ruta No Encontrada</h3>
+      <p class="text-muted small mb-4">
+        La dirección <code class="text-danger">/{{ ruta_solicitada|default:request.path }}</code> no existe dentro del sistema clínico PetCare o fue movida.
+      </p>
+      <div class="d-grid gap-2">
+        <a href="{% url 'dashboard' %}" class="btn btn-emerald py-2">
+          <i class="bi bi-house-door-fill me-1"></i> Volver al Menú Inicial
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block auth_content %}
+<div class="min-vh-100 d-flex align-items-center justify-content-center p-4" style="background: radial-gradient(circle at top left, #115e59 0%, #0b1120 75%);">
+  <div class="saas-card p-5 text-center" style="max-width: 460px; width: 100%;">
+    <div class="mx-auto mb-3 d-flex align-items-center justify-content-center rounded-circle badge-soft-danger" style="width:72px; height:72px; font-size:2rem;">
+      <i class="bi bi-exclamation-diamond-fill"></i>
+    </div>
+    <span class="badge bg-dark font-monospace px-3 py-1 mb-2">HTTP ERROR 404</span>
+    <h4 class="fw-bold mb-2">Dirección No Encontrada</h4>
+    <p class="text-muted small mb-4">La URL solicitada no corresponde a ningún módulo válido de PetCare.io.</p>
+    <a href="{% url 'login' %}" class="btn btn-emerald w-100 py-2">
+      <i class="bi bi-box-arrow-in-right me-1"></i> Ir al Inicio de Sesión
+    </a>
+  </div>
+</div>
+{% endblock %}

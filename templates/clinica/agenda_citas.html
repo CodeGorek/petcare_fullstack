@@ -1,0 +1,164 @@
+{% extends "clinica/base.html" %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Calendario Médico & Disponibilidad</h4>
+    <p class="text-muted small mb-0">Validación transaccional contra solapamiento horario y consulta asíncrona de bloques.</p>
+  </div>
+</div>
+
+<!-- Tarjetas de Veterinarios Activos -->
+<div class="row g-3 mb-4">
+  {% for v in veterinarios %}
+  <div class="col-md-6 col-xl-4">
+    <div class="saas-card p-3 d-flex align-items-center justify-content-between">
+      <div class="d-flex align-items-center gap-3">
+        <div class="kpi-icon badge-soft-success"><i class="bi bi-person-badge-fill"></i></div>
+        <div>
+          <div class="fw-bold">Dr(a). {{ v.nombre }}</div>
+          <span class="badge badge-soft-info rounded-pill">{{ v.get_especialidad_display }}</span>
+        </div>
+      </div>
+      <div class="text-end">
+        <small class="text-muted d-block">Jornada</small>
+        <span class="fw-bold small font-monospace">{{ v.hora_inicio|time:"H:i" }} - {{ v.hora_fin|time:"H:i" }}</span>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if form.errors %}
+<div class="alert alert-danger border-0 rounded-3 shadow-sm">
+  <i class="bi bi-shield-fill-exclamation me-2"></i><strong>Regla de Negocio Activada (Anti-Solapamiento):</strong>
+  {{ form.non_field_errors }} {{ form.errors }}
+</div>
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="saas-card p-4">
+      <h6 class="fw-bold mb-3"><i class="bi bi-calendar-plus text-success me-2"></i>Agendar Nueva Consulta</h6>
+      <form method="post">
+        {% csrf_token %}
+        <div class="row g-3">
+          <div class="col-12"><label class="form-label">Paciente (Mascota)</label>{{ form.mascota }}</div>
+          <div class="col-12"><label class="form-label">Médico Veterinario</label>{{ form.veterinario }}</div>
+          <div class="col-md-6"><label class="form-label">Fecha</label>{{ form.fecha }}</div>
+          <div class="col-md-6"><label class="form-label">Hora Seleccionada</label>{{ form.hora }}</div>
+
+          <div class="col-12">
+            <div class="p-3 rounded-3 bg-light border">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="small fw-bold text-secondary"><i class="bi bi-lightning-charge-fill text-warning"></i> Bloques de 30 min (Click para elegir)</span>
+                <span class="badge bg-white text-dark border" style="font-size:0.68rem;">Verde = Libre | Rojo = Ocupado</span>
+              </div>
+              <div id="bloques-container" class="d-flex flex-wrap gap-1">
+                <span class="text-muted small">Elige médico y fecha para cargar la parrilla horaria...</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-8"><label class="form-label">Motivo de Consulta</label>{{ form.motivo }}</div>
+          <div class="col-md-4"><label class="form-label">Estado</label>{{ form.estado }}</div>
+          <div class="col-12 pt-2">
+            <button type="submit" class="btn btn-emerald w-100 py-2">
+              <i class="bi bi-check2-circle me-1"></i> Confirmar Reserva en Agenda
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="saas-card">
+      <div class="saas-card-header">
+        <h6 class="fw-bold mb-0"><i class="bi bi-list-check text-primary me-2"></i>Citas Registradas ({{ citas|length }})</h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-saas mb-0">
+          <thead>
+            <tr><th>Fecha y Hora</th><th>Paciente / Tutor</th><th>Veterinario</th><th>Estado</th><th class="text-end">Gestión</th></tr>
+          </thead>
+          <tbody>
+          {% for c in citas %}
+            <tr>
+              <td>
+                <div class="fw-bold">{{ c.fecha|date:"d/m/Y" }}</div>
+                <span class="badge bg-dark font-monospace">{{ c.hora|time:"H:i" }} hrs</span>
+              </td>
+              <td>
+                <div class="fw-bold">{{ c.mascota.nombre }}</div>
+                <small class="text-muted">{{ c.mascota.tutor.nombre_completo }}</small>
+              </td>
+              <td>
+                <div class="fw-semibold">Dr(a). {{ c.veterinario.nombre }}</div>
+                <small class="text-muted">{{ c.motivo }}</small>
+              </td>
+              <td>
+                {% if c.estado == 'PROGRAMADA' %}<span class="badge badge-soft-info rounded-pill px-3">Programada</span>
+                {% elif c.estado == 'COMPLETADA' %}<span class="badge badge-soft-success rounded-pill px-3">Completada</span>
+                {% else %}<span class="badge badge-soft-danger rounded-pill px-3">Cancelada</span>{% endif %}
+              </td>
+              <td class="text-end">
+                {% if c.estado == 'PROGRAMADA' %}
+                <div class="btn-group btn-group-sm">
+                  <form method="post" action="{% url 'cambiar_estado_cita' c.id 'COMPLETADA' %}">
+                    {% csrf_token %}
+                    <button class="btn btn-outline-success me-1" title="Completar"><i class="bi bi-check-lg"></i></button>
+                  </form>
+                  <form method="post" action="{% url 'cambiar_estado_cita' c.id 'CANCELADA' %}">
+                    {% csrf_token %}
+                    <button class="btn btn-outline-danger" title="Cancelar"><i class="bi bi-x-lg"></i></button>
+                  </form>
+                </div>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5" class="text-center py-4 text-muted">No hay citas registradas.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const selectVet = document.getElementById('id_veterinario');
+const inputFecha = document.getElementById('id_fecha');
+const inputHora = document.getElementById('id_hora');
+const container = document.getElementById('bloques-container');
+
+function consultarDisponibilidad() {
+  if (!selectVet.value || !inputFecha.value) return;
+  container.innerHTML = '<span class="small text-secondary">Consultando agenda del profesional...</span>';
+  fetch(`/agenda/disponibilidad/?veterinario_id=${selectVet.value}&fecha=${inputFecha.value}`)
+    .then(r => r.json())
+    .then(data => {
+      container.innerHTML = '';
+      data.bloques.forEach(b => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `btn btn-sm font-monospace ${b.disponible ? 'btn-outline-success' : 'btn-danger disabled'}`;
+        btn.style.fontSize = '0.78rem';
+        btn.textContent = b.hora;
+        if (b.disponible) {
+          btn.onclick = () => {
+            inputHora.value = b.hora;
+            document.querySelectorAll('#bloques-container button').forEach(el => el.classList.remove('active'));
+            btn.classList.add('active');
+          };
+        }
+        container.appendChild(btn);
+      });
+    });
+}
+if (selectVet && inputFecha) {
+  selectVet.addEventListener('change', consultarDisponibilidad);
+  inputFecha.addEventListener('change', consultarDisponibilidad);
+}
+</script>
+{% endblock %}

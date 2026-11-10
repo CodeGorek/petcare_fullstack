@@ -1,0 +1,198 @@
+{% extends "clinica/base.html" %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Centro de Control Clínico</h4>
+    <p class="text-muted small mb-0">Monitoreo en tiempo real de pacientes, agenda médica y vigilancia inmunológica.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <span class="badge badge-soft-success px-3 py-2 rounded-pill"><i class="bi bi-check2-circle me-1"></i> Sincronizado con PostgreSQL</span>
+  </div>
+</div>
+
+<!-- KPIs -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card d-flex align-items-center justify-content-between">
+      <div>
+        <div class="text-muted small fw-semibold mb-1">Tutores Registrados</div>
+        <h2 class="fw-bold mb-0">{{ total_tutores }}</h2>
+        <small class="text-success fw-semibold"><i class="bi bi-person-check"></i> Verificados con RUT</small>
+      </div>
+      <div class="kpi-icon badge-soft-info"><i class="bi bi-people-fill"></i></div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card d-flex align-items-center justify-content-between">
+      <div>
+        <div class="text-muted small fw-semibold mb-1">Pacientes Activos</div>
+        <h2 class="fw-bold mb-0">{{ total_mascotas }}</h2>
+        <small class="text-primary fw-semibold"><i class="bi bi-heart-pulse"></i> Ficha electrónica</small>
+      </div>
+      <div class="kpi-icon badge-soft-purple"><i class="bi bi-Shield-plus"></i>🐾</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card d-flex align-items-center justify-content-between">
+      <div>
+        <div class="text-muted small fw-semibold mb-1">Citas para Hoy</div>
+        <h2 class="fw-bold mb-0">{{ citas_hoy_count }}</h2>
+        <small class="text-secondary"><i class="bi bi-clock-history"></i> Bloques de 30 min</small>
+      </div>
+      <div class="kpi-icon badge-soft-success"><i class="bi bi-calendar2-check-fill"></i></div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card d-flex align-items-center justify-content-between" style="border-left: 4px solid #ef4444;">
+      <div>
+        <div class="text-danger small fw-bold mb-1">Alertas de Vacunas</div>
+        <h2 class="fw-bold text-danger mb-0">{{ alertas_urgentes|length }}</h2>
+        <small class="text-danger"><i class="bi bi-exclamation-circle"></i> Vencidas o &le; 7 días</small>
+      </div>
+      <div class="kpi-icon badge-soft-danger"><i class="bi bi-bell-fill"></i></div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- Agenda del Día -->
+  <div class="col-lg-7">
+    <div class="saas-card h-100">
+      <div class="saas-card-header">
+        <div>
+          <h6 class="fw-bold mb-0"><i class="bi bi-calendar-event text-primary me-2"></i>Citas Médicas de Hoy</h6>
+          <small class="text-muted">Control de bloques sin solapamiento por veterinario</small>
+        </div>
+        <a href="{% url 'agenda_citas' %}" class="btn btn-sm btn-light fw-semibold">Ver Agenda Completa</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-saas mb-0">
+          <thead>
+            <tr><th>Bloque</th><th>Paciente</th><th>Profesional</th><th>Estado</th><th class="text-end">Acción</th></tr>
+          </thead>
+          <tbody>
+          {% for c in citas_hoy %}
+            <tr>
+              <td><span class="badge bg-dark font-monospace px-2 py-1">{{ c.hora|time:"H:i" }}</span></td>
+              <td>
+                <div class="fw-bold">{{ c.mascota.nombre }}</div>
+                <small class="text-muted">{{ c.mascota.get_especie_display }} • {{ c.mascota.tutor.nombre_completo }}</small>
+              </td>
+              <td>
+                <div class="fw-semibold">Dr(a). {{ c.veterinario.nombre }}</div>
+                <small class="text-muted">{{ c.motivo|truncatechars:32 }}</small>
+              </td>
+              <td>
+                {% if c.estado == 'PROGRAMADA' %}<span class="badge badge-soft-info rounded-pill px-3">Programada</span>
+                {% elif c.estado == 'COMPLETADA' %}<span class="badge badge-soft-success rounded-pill px-3">Completada</span>
+                {% else %}<span class="badge badge-soft-danger rounded-pill px-3">Cancelada</span>{% endif %}
+              </td>
+              <td class="text-end">
+                {% if c.estado == 'PROGRAMADA' %}
+                <form method="post" action="{% url 'cambiar_estado_cita' c.id 'COMPLETADA' %}" class="d-inline">
+                  {% csrf_token %}
+                  <button class="btn btn-sm btn-outline-success" title="Marcar Completada"><i class="bi bi-check-lg"></i></button>
+                </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5" class="text-center text-muted py-4">No hay citas programadas para el día de hoy.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alertas Preventivas -->
+  <div class="col-lg-5">
+    <div class="saas-card h-100">
+      <div class="saas-card-header">
+        <div>
+          <h6 class="fw-bold mb-0 text-danger"><i class="bi bi-shield-exclamation me-2"></i>Vigilancia de Vacunación</h6>
+          <small class="text-muted">Pacientes con dosis vencidas o próximas (&le; 7 días)</small>
+        </div>
+        <a href="{% url 'recordatorios_vacunas' %}" class="btn btn-sm btn-light fw-semibold">Gestionar</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-saas mb-0">
+          <thead>
+            <tr><th>Paciente</th><th>Vacuna / Control</th><th>Estado</th><th></th></tr>
+          </thead>
+          <tbody>
+          {% for a in alertas_urgentes %}
+            <tr>
+              <td>
+                <div class="fw-bold">{{ a.mascota.nombre }}</div>
+                <small class="text-muted"><i class="bi bi-telephone"></i> {{ a.mascota.tutor.telefono }}</small>
+              </td>
+              <td>
+                <div class="fw-semibold">{{ a.nombre_vacuna_control }}</div>
+                <small class="text-muted">Fecha: {{ a.fecha_programada|date:"d/m/Y" }}</small>
+              </td>
+              <td>
+                {% if a.nivel_alerta == 'VENCIDO' %}
+                  <span class="badge badge-soft-danger rounded-pill px-2">VENCIDO</span>
+                {% else %}
+                  <span class="badge badge-soft-warning rounded-pill px-2">PRÓXIMO</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <form method="post" action="{% url 'marcar_recordatorio_aplicado' a.id %}">
+                  {% csrf_token %}
+                  <button class="btn btn-sm btn-emerald py-1 px-2" title="Aplicar y agendar refuerzo anual">
+                    <i class="bi bi-check2"></i> Aplicar
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-4">Todos los pacientes están al día.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Últimas Fichas Clínicas -->
+<div class="saas-card">
+  <div class="saas-card-header">
+    <div>
+      <h6 class="fw-bold mb-0"><i class="bi bi-journal-medical text-success me-2"></i>Últimas Atenciones y Fichas Clínicas Emitidas</h6>
+    </div>
+    <a href="{% url 'fichas_clinicas' %}" class="btn btn-sm btn-outline-dark">Historial Completo</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-saas mb-0">
+      <thead>
+        <tr><th>Ficha</th><th>Paciente</th><th>Veterinario</th><th>Signos Vitales</th><th>Diagnóstico y Receta</th></tr>
+      </thead>
+      <tbody>
+      {% for f in ultimas_fichas %}
+        <tr>
+          <td class="fw-bold text-secondary">#{{ f.id }}</td>
+          <td>
+            <div class="fw-bold">{{ f.mascota.nombre }}</div>
+            <small class="text-muted">{{ f.fecha_atencion|date:"d/m/Y H:i" }}</small>
+          </td>
+          <td>Dr(a). {{ f.veterinario.nombre }}</td>
+          <td>
+            <span class="badge bg-light text-dark border me-1">{{ f.peso_registrado }} kg</span>
+            <span class="badge bg-light text-dark border">{{ f.temperatura_c }} °C</span>
+          </td>
+          <td>
+            <div class="fw-semibold">{{ f.diagnostico|truncatechars:65 }}</div>
+            {% if f.receta_medica %}<small class="text-primary"><i class="bi bi-capsule"></i> {{ f.receta_medica|truncatechars:60 }}</small>{% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="text-center text-muted py-3">Sin fichas registradas aún.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

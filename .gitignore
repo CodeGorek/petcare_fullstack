@@ -1,0 +1,10 @@
+venv/
+__pycache__/
+*.pyc
+staticfiles/
+.env
+db.sqlite3
+*.sock
+upgrade_ui.sh
+upgrade_roles.sh
+add_error_pages.sh

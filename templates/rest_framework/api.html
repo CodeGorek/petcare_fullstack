@@ -1,0 +1,14 @@
+{% extends "rest_framework/base.html" %}
+{% block title %}PetCare Cloud | API RESTful (DRF){% endblock %}
+{% block bootstrap_theme %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@3.4.1/flatly/bootstrap.min.css" type="text/css">
+<style>
+  .navbar-inverse { background: linear-gradient(90deg, #0b1120 0%, #1e293b 100%) !important; border-bottom: 3px solid #10b981 !important; }
+  .navbar-inverse .navbar-brand { color: #ffffff !important; font-weight: 700; }
+  .btn-primary { background-color: #059669 !important; border-color: #047857 !important; }
+  pre.prettyprint { border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; padding: 14px; }
+</style>
+{% endblock %}
+{% block branding %}
+<a class="navbar-brand" href="/">🐾 PetCare.io — Explorador API REST (DRF) &nbsp;<span class="label label-success">Volver al Panel</span></a>
+{% endblock %}

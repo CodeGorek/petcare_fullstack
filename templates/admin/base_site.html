@@ -1,0 +1,30 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ title }} | PetCare Cloud Admin{% endblock %}
+{% block extrastyle %}
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #0f172a;
+    --secondary: #059669;
+    --accent: #10b981;
+    --primary-fg: #f8fafc;
+    --header-bg: #0f172a;
+    --header-color: #f8fafc;
+    --breadcrumbs-bg: #1e293b;
+    --breadcrumbs-fg: #94a3b8;
+    --link-fg: #059669;
+    --link-hover-color: #047857;
+  }
+  body { font-family: 'Plus Jakarta Sans', sans-serif !important; }
+  #header { background: linear-gradient(90deg, #0b132b 0%, #1e293b 100%); border-bottom: 2px solid #10b981; padding: 14px 24px; }
+  #branding h1 a:link, #branding h1 a:visited { color: #ffffff !important; font-weight: 700; letter-spacing: -0.3px; }
+  .module h2, .module caption, .inline-group h2 { background: #1e293b !important; color: #fff !important; border-radius: 6px 6px 0 0; }
+  .button, input[type=submit], input[type=button], .submit-row input, a.button { background: #059669 !important; border-radius: 6px; font-weight: 600; }
+  .button:hover, input[type=submit]:hover { background: #047857 !important; }
+</style>
+{% endblock %}
+{% block branding %}
+<h1 id="site-name">
+  <a href="{% url 'admin:index' %}">🐾 PetCare Enterprise <span style="font-size:12px; background:#10b981; color:#0b132b; padding:2px 8px; border-radius:99px; margin-left:8px; font-weight:700;">ADMINISTRATION</span></a>
+</h1>
+{% endblock %}

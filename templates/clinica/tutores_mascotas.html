@@ -1,0 +1,170 @@
+{% extends "clinica/base.html" %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Gestión de Tutores y Pacientes</h4>
+    <p class="text-muted small mb-0">Registro validado por RUT chileno, perfilado por especie y control de peso clínico.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-dark fw-semibold rounded-3" data-bs-toggle="modal" data-bs-target="#modalTutor">
+      <i class="bi bi-person-plus-fill me-1"></i> Nuevo Tutor
+    </button>
+    <button class="btn btn-emerald" data-bs-toggle="modal" data-bs-target="#modalMascota">
+      <i class="bi bi-plus-circle-fill me-1"></i> Registrar Mascota
+    </button>
+  </div>
+</div>
+
+{% if tutor_form.errors or mascota_form.errors %}
+<div class="alert alert-danger border-0 rounded-3 shadow-sm">
+  <strong>Revisa los datos ingresados:</strong>
+  {{ tutor_form.errors }} {{ mascota_form.errors }}
+</div>
+{% endif %}
+
+<div class="row g-4">
+  <!-- Tabla de Mascotas -->
+  <div class="col-lg-8">
+    <div class="saas-card">
+      <div class="saas-card-header">
+        <h6 class="fw-bold mb-0"><i class="bi bi-heart-pulse text-success me-2"></i>Directorio de Pacientes ({{ mascotas|length }})</h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-saas mb-0">
+          <thead>
+            <tr><th>Paciente</th><th>Especie / Raza</th><th>Peso Actual</th><th>Tutor Responsable</th><th class="text-end">Acciones</th></tr>
+          </thead>
+          <tbody>
+          {% for m in mascotas %}
+            <tr>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="rounded-3 d-flex align-items-center justify-content-center fw-bold" style="width:38px; height:38px; background:#f1f5f9;">
+                    {% if m.especie == 'CANINO' %}🐕{% elif m.especie == 'FELINO' %}🐈{% else %}🦜{% endif %}
+                  </div>
+                  <div>
+                    <div class="fw-bold">{{ m.nombre }}</div>
+                    <small class="text-muted">Sexo: {{ m.get_sexo_display }} | Nac: {{ m.fecha_nacimiento|date:"d/m/Y" }}</small>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="badge {% if m.especie == 'CANINO' %}badge-soft-success{% elif m.especie == 'FELINO' %}badge-soft-purple{% else %}badge-soft-warning{% endif %} rounded-pill px-2">
+                  {{ m.get_especie_display }}
+                </span>
+                <div class="small text-muted mt-1">{{ m.raza }}</div>
+              </td>
+              <td><span class="fw-bold">{{ m.peso_kg }} kg</span></td>
+              <td>
+                <div class="fw-semibold">{{ m.tutor.nombre_completo }}</div>
+                <small class="text-muted">{{ m.tutor.rut }} • {{ m.tutor.telefono }}</small>
+              </td>
+              <td class="text-end">
+                <a href="{% url 'editar_mascota' m.id %}" class="btn btn-sm btn-light border" title="Editar"><i class="bi bi-pencil-square text-primary"></i></a>
+                <form method="post" action="{% url 'eliminar_mascota' m.id %}" class="d-inline">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-light border" onclick="return confirm('¿Confirmas eliminar a {{ m.nombre }}?')"><i class="bi bi-trash3 text-danger"></i></button>
+                </form>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5" class="text-center py-4 text-muted">No hay mascotas registradas.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Directorio de Tutores -->
+  <div class="col-lg-4">
+    <div class="saas-card">
+      <div class="saas-card-header">
+        <h6 class="fw-bold mb-0"><i class="bi bi-person-vcard text-primary me-2"></i>Tutores Registrados ({{ tutores|length }})</h6>
+      </div>
+      <div class="p-3">
+        {% for t in tutores %}
+        <div class="p-3 rounded-3 border mb-2 bg-light bg-opacity-50 searchable-card">
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="fw-bold">{{ t.nombre_completo }}</div>
+            <span class="badge bg-dark font-monospace">{{ t.rut }}</span>
+          </div>
+          <div class="small text-muted mt-1"><i class="bi bi-envelope me-1"></i>{{ t.email }} | <i class="bi bi-telephone me-1"></i>{{ t.telefono }}</div>
+          <div class="small text-secondary mt-1"><i class="bi bi-geo-alt me-1"></i>{{ t.direccion }}</div>
+          <div class="mt-2 pt-2 border-top d-flex flex-wrap gap-1">
+            {% for masc in t.mascotas.all %}
+              <span class="badge badge-soft-info rounded-pill">🐾 {{ masc.nombre }}</span>
+            {% empty %}
+              <span class="text-muted" style="font-size:0.75rem;">Sin mascotas asociadas</span>
+            {% endfor %}
+          </div>
+        </div>
+        {% empty %}
+        <p class="text-muted text-center my-3">Sin tutores registrados.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nuevo Tutor -->
+<div class="modal fade" id="modalTutor" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 rounded-4 shadow">
+      <div class="modal-header border-bottom-0 pb-0">
+        <h5 class="modal-title fw-bold">Registrar Nuevo Tutor</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="tipo_form" value="tutor">
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-5"><label class="form-label">RUT Chileno</label>{{ tutor_form.rut }}</div>
+            <div class="col-md-7"><label class="form-label">Nombre Completo</label>{{ tutor_form.nombre_completo }}</div>
+            <div class="col-md-6"><label class="form-label">Teléfono</label>{{ tutor_form.telefono }}</div>
+            <div class="col-md-6"><label class="form-label">Correo Electrónico</label>{{ tutor_form.email }}</div>
+            <div class="col-12"><label class="form-label">Dirección Domiciliaria</label>{{ tutor_form.direccion }}</div>
+          </div>
+        </div>
+        <div class="modal-footer border-top-0">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-emerald">Guardar Tutor</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nueva Mascota -->
+<div class="modal fade" id="modalMascota" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 rounded-4 shadow">
+      <div class="modal-header border-bottom-0 pb-0">
+        <h5 class="modal-title fw-bold">Registrar Nuevo Paciente</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="tipo_form" value="mascota">
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6"><label class="form-label">Tutor Responsable</label>{{ mascota_form.tutor }}</div>
+            <div class="col-md-6"><label class="form-label">Nombre del Paciente</label>{{ mascota_form.nombre }}</div>
+            <div class="col-md-4"><label class="form-label">Especie</label>{{ mascota_form.especie }}</div>
+            <div class="col-md-4"><label class="form-label">Raza</label>{{ mascota_form.raza }}</div>
+            <div class="col-md-4"><label class="form-label">Sexo</label>{{ mascota_form.sexo }}</div>
+            <div class="col-md-6"><label class="form-label">Fecha de Nacimiento</label>{{ mascota_form.fecha_nacimiento }}</div>
+            <div class="col-md-6"><label class="form-label">Peso Inicial (kg)</label>{{ mascota_form.peso_kg }}</div>
+            <div class="col-12"><label class="form-label">Alergias / Observaciones Clínicas</label>{{ mascota_form.alergias_conocidas }}</div>
+          </div>
+        </div>
+        <div class="modal-footer border-top-0">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-emerald">Guardar Paciente</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends "clinica/base.html" %}
+{% block auth_content %}
+<div class="row g-0 min-vh-100">
+  <div class="col-lg-6 d-none d-lg-flex flex-column justify-content-between p-5 text-white" style="background: radial-gradient(circle at top left, #115e59 0%, #0b1120 70%);">
+    <div class="d-flex align-items-center gap-3">
+      <div class="brand-icon"><i class="bi bi-heart-pulse-fill"></i></div>
+      <span class="fs-4 fw-bold">PetCare<span style="color:#34d399;">.io</span></span>
+    </div>
+    <div class="my-auto py-5">
+      <span class="badge rounded-pill px-3 py-2 mb-3" style="background:rgba(16,185,129,0.2); color:#34d399; border:1px solid rgba(16,185,129,0.3);">
+        ARQUITECTURA FULLSTACK DRF + POSTGRESQL
+      </span>
+      <h1 class="display-5 fw-bold mb-3"> Plataforma Integral de Gestión Clínica Veterinaria</h1>
+      <p class="text-white-50 fs-5 mb-4">
+        Control de agenda médica anti-solapamiento, expediente clínico electrónico y vigilancia automatizada de esquemas de vacunación.
+      </p>
+      <div class="row g-3 pt-2">
+        <div class="col-6">
+          <div class="p-3 rounded-4" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08);">
+            <i class="bi bi-shield-check text-success fs-4"></i>
+            <div class="fw-bold mt-1">Control Anti-Solapamiento</div>
+            <small class="text-white-50">Constraint transaccional por profesional y bloque.</small>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="p-3 rounded-4" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08);">
+            <i class="bi bi-Bell-fill text-warning fs-4"></i>
+            <div class="fw-bold mt-1">Alertas Preventivas</div>
+            <small class="text-white-50">Cálculo automático de refuerzos anuales (+365d).</small>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="small text-white-50 d-flex justify-content-between">
+      <span>Despliegue Cloud AWS EC2</span>
+      <span>Django 5.1 + DRF 3.15</span>
+    </div>
+  </div>
+
+  <div class="col-lg-6 d-flex align-items-center justify-content-center p-4 bg-white">
+    <div style="max-width: 420px; width: 100%;">
+      <div class="mb-4">
+        <h3 class="fw-bold mb-1">Iniciar Sesión</h3>
+        <p class="text-muted small">Ingresa tus credenciales para acceder al panel clínico PetCare.</p>
+      </div>
+
+      {% if form.errors %}
+      <div class="alert alert-danger small border-0 rounded-3">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i> Usuario o contraseña incorrectos.
+      </div>
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label">Nombre de Usuario</label>
+          <div class="input-group">
+            <span class="input-group-text bg-light"><i class="bi bi-person"></i></span>
+            <input type="text" name="username" id="login-user" class="form-control" placeholder="Ej: admin" required autofocus>
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="form-label">Contraseña</label>
+          <div class="input-group">
+            <span class="input-group-text bg-light"><i class="bi bi-lock"></i></span>
+            <input type="password" name="password" id="login-pass" class="form-control" placeholder="••••••••••••" required>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-emerald w-100 py-2 mb-3">
+          Ingresar al Sistema <i class="bi bi-arrow-right ms-1"></i>
+        </button>
+      </form>
+
+      <div class="p-3 rounded-3 bg-light border">
+        <div class="small fw-semibold text-secondary text-center mb-2">Demostración de Roles (Defensa EVA 3)</div>
+        <div class="d-grid gap-2">
+          <button type="button" class="btn btn-sm btn-outline-dark" onclick="document.getElementById('login-user').value='admin'; document.getElementById('login-pass').value='AdminPetCare2026!';">
+            <i class="bi bi-shield-lock-fill text-danger me-1"></i> Rol Root: <code>admin</code> (Ve API, Admin y Cuentas)
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-success" onclick="document.getElementById('login-user').value='dra.herrera'; document.getElementById('login-pass').value='VetPetCare2026!';">
+            <i class="bi bi-person-badge-fill me-1"></i> Rol Profesional: <code>dra.herrera</code> (Solo Vista Clínica)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
