@@ -1,0 +1,12 @@
+{% extends 'clinica/base.html' %}
+{% block content %}
+<div class="saas-card p-4"><h4>Pagar en Webpay de prueba</h4>
+<div class="alert alert-info">Simulación: no se cobra dinero real. Usa exclusivamente tarjetas de prueba de Transbank.</div>
+<p>Cuenta #{{ pago.cuenta_id }} · Total: <strong>${{ pago.monto|floatformat:'0g' }} CLP</strong></p>
+<form method="post" action="{{ pago.url_webpay }}">
+<input type="hidden" name="token_ws" value="{{ pago.token }}"><button class="btn btn-emerald">Continuar al formulario oficial de prueba</button>
+</form>
+<p class="mt-3 small">El formulario de prueba tiene un tiempo limitado. Al terminar volverás a PetCare para consultar el resultado.</p>
+<a href="{% url 'cuenta_detalle' pago.cuenta_id %}">Volver a la cuenta y verificar el pago</a>
+</div>
+{% endblock %}

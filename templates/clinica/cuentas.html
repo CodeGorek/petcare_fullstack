@@ -1,0 +1,14 @@
+{% extends 'clinica/base.html' %}
+{% block content %}
+<h4 class="fw-bold">Cuentas de atención</h4>
+<p class="text-muted">Consultas, procedimientos y medicamentos en pesos chilenos.</p>
+<div class="alert alert-info">Webpay en modo de prueba: no se cobran fondos reales. Los comprobantes no son boletas tributarias.</div>
+<a href="{% url 'fichas_clinicas' %}" class="btn btn-emerald mb-3">Crear cuenta desde una ficha clínica</a>
+{% if user.is_superuser %}<a href="{% url 'precios' %}" class="btn btn-outline-dark mb-3">Administrar precios</a>{% endif %}
+<div class="saas-card table-responsive">
+<table class="table table-saas mb-0"><thead><tr><th>Cuenta / Ficha</th><th>Paciente / Tutor</th><th>Total CLP</th><th>Estado</th><th></th></tr></thead><tbody>
+{% for cuenta in cuentas %}
+<tr><td>#{{ cuenta.pk }} / #{{ cuenta.ficha_id }}</td><td>{{ cuenta.ficha.mascota.nombre }}<br><small>{{ cuenta.ficha.mascota.tutor.nombre_completo }}</small></td><td>${{ cuenta.total|floatformat:'0g' }}</td><td>{% if cuenta.pagada %}<span class="badge badge-soft-success">Pagada (prueba)</span>{% elif cuenta.editable %}Pendiente{% else %}Pago por verificar{% endif %}</td><td><a class="btn btn-sm btn-outline-dark" href="{% url 'cuenta_detalle' cuenta.pk %}">Ver cuenta</a></td></tr>
+{% empty %}<tr><td colspan="5">Aún no hay cuentas. Abre una ficha clínica y selecciona «Crear / ver cuenta».</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}
