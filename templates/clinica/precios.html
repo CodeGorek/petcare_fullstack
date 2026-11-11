@@ -1,0 +1,25 @@
+{% extends 'clinica/base.html' %}
+{% block content %}
+<h4 class="fw-bold">Precios de servicios y medicamentos</h4>
+<p class="text-muted">Valores en CLP, sin decimales. Los cambios se aplican a nuevas líneas de cobro; las cuentas ya creadas conservan sus precios.</p>
+<div class="row g-4">
+<div class="col-lg-4"><div class="saas-card p-4"><h5>Nuevo servicio</h5><form method="post">{% csrf_token %}{{ form.as_p }}<button class="btn btn-emerald">Guardar servicio</button></form></div></div>
+<div class="col-lg-8"><div class="saas-card p-4"><h5>Servicios</h5>
+{% for servicio in servicios %}
+<form method="post" class="border-bottom py-3">{% csrf_token %}
+<input type="hidden" name="servicio_id" value="{{ servicio.pk }}">
+<div class="row g-2"><div class="col-md-6"><label class="form-label" for="nombre-{{ servicio.pk }}">Servicio</label><input id="nombre-{{ servicio.pk }}" class="form-control" name="nombre" value="{{ servicio.nombre }}" required maxlength="120"></div>
+<div class="col-md-3"><label class="form-label" for="precio-{{ servicio.pk }}">Precio CLP</label><input id="precio-{{ servicio.pk }}" class="form-control" name="precio" type="number" min="1" value="{{ servicio.precio|stringformat:'d' }}" required></div>
+<div class="col-md-3 d-flex align-items-end"><button class="btn btn-outline-dark">Actualizar</button></div></div>
+<label class="mt-2"><input type="checkbox" name="activo" {% if servicio.activo %}checked{% endif %}> Disponible para cobrar</label>
+</form>{% empty %}<p>Agrega la consulta, exámenes, vacunas y procedimientos que ofrece la clínica.</p>{% endfor %}
+</div></div></div>
+<div class="saas-card p-4 mt-4"><h5>Precio por unidad dispensada de cada lote</h5>
+<p class="small text-muted">Usa la misma unidad que descuentas del stock: comprimido, frasco, insumo, etc. Un lote sin precio no se puede incluir en una nueva cuenta.</p>
+{% for lote in lotes %}
+<form method="post" class="row g-2 border-bottom py-3 align-items-center">{% csrf_token %}<input type="hidden" name="tipo" value="medicamento"><input type="hidden" name="lote_id" value="{{ lote.pk }}">
+<div class="col-md-7">{{ lote.nombre }} <small class="text-muted">{{ lote.codigo_lote }} — {{ lote.presentacion }}</small></div>
+<div class="col-md-3"><label class="visually-hidden" for="lote-{{ lote.pk }}">Precio CLP</label><input id="lote-{{ lote.pk }}" class="form-control" type="number" name="precio_unitario" min="1" placeholder="Precio pendiente" {% if lote.precio_unitario %}value="{{ lote.precio_unitario|stringformat:'d' }}"{% endif %}></div>
+<div class="col-md-2"><button class="btn btn-outline-dark">Guardar</button></div></form>
+{% endfor %}</div>
+{% endblock %}

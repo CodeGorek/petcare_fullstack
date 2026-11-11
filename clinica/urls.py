@@ -12,6 +12,7 @@ router.register(r'fichas', views.FichaClinicaViewSet)
 router.register(r'recordatorios', views.RecordatorioVacunaViewSet)
 
 urlpatterns = [
+    path('', include('clinica.cobros_urls')),
     path('', views.dashboard, name='dashboard'),
     path('metricas-json/', views.api_metricas_dashboard, name='api_metricas_dashboard'),
     path('tutores-mascotas/', views.gestion_tutores_mascotas, name='tutores_mascotas'),

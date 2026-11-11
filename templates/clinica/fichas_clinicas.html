@@ -68,6 +68,10 @@
           <h5 class="fw-bold mb-0">🐾 {{ f.mascota.nombre }} <small class="text-muted fw-normal fs-6">({{ f.mascota.tutor.nombre_completo }})</small></h5>
         </div>
         <div class="d-flex align-items-center gap-2">
+          <form method="post" action="{% url 'crear_cuenta' f.id %}">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-outline-dark">Crear / ver cuenta</button>
+          </form>
           <a href="{% url 'imprimir_ficha_individual' f.id %}" target="_blank" class="btn btn-sm btn-emerald">
             <i class="bi bi-printer-fill me-1"></i> Imprimir Solo Esta Ficha
           </a>

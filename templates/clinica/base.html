@@ -259,6 +259,12 @@
     </li>
   </ul>
 
+  <div class="nav-section-title">Cobros de atención</div>
+  <ul class="sidebar-nav">
+    <li><a href="{% url 'cuentas' %}" class="sidebar-link"><i class="bi bi-credit-card"></i> Cuentas y pagos de prueba</a></li>
+    {% if user.is_superuser %}<li><a href="{% url 'precios' %}" class="sidebar-link"><i class="bi bi-tags"></i> Precios</a></li>{% endif %}
+  </ul>
+
   {% if user.is_superuser %}
   <div class="nav-section-title">Administración Root & Backend</div>
   <ul class="sidebar-nav">

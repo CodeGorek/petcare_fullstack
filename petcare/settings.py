@@ -109,3 +109,15 @@ REST_FRAMEWORK = {
 }
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# This project deliberately supports simulated payments only.
+WEBPAY_AMBIENTE = os.getenv('WEBPAY_AMBIENTE', 'INTEGRACION')
+WEBPAY_BASE_URL = os.getenv('WEBPAY_BASE_URL', 'http://localhost:8000').rstrip('/')
+
+
+# BEGIN PETCARE HTTPS SETTINGS
+if os.getenv('PETCARE_HTTPS_ENABLED', 'False').lower() in ('true', '1', 'yes'):
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+# END PETCARE HTTPS SETTINGS
