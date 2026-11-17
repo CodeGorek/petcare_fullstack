@@ -41,15 +41,17 @@ const NAV_ITEMS = [
 
 export default function Layout({ modulo, setModulo, user, health, refreshing, onLogout, onRefresh, children }) {
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const [logoFallback, setLogoFallback] = useState(false);
 
   const sidebarContent = (
     <div className="flex flex-col h-full bg-[#0b1120] text-slate-400 border-r border-white/5">
       <div className="px-5 py-5 border-b border-white/10 flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
-          {S3_STATIC_URL ? (
+          {S3_STATIC_URL && !logoFallback ? (
             <img
               src={`${S3_STATIC_URL}/logo-petcare.png`}
               alt="PetCare"
+              onError={() => setLogoFallback(true)}
               className="w-9 h-9 rounded-xl object-cover shadow-lg shadow-emerald-500/20"
             />
           ) : (
