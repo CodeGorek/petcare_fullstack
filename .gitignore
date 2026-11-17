@@ -8,3 +8,5 @@ db.sqlite3
 upgrade_ui.sh
 upgrade_roles.sh
 add_error_pages.sh
+node_modules/
+frontend/dist/
