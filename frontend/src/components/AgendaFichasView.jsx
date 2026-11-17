@@ -1,9 +1,24 @@
 import { useState } from 'react';
+import {
+  BellPlus,
+  BellRing,
+  CalendarClock,
+  CalendarPlus,
+  CheckCircle2,
+  Clock,
+  FilePlus2,
+  Plus,
+  Scale,
+  Stethoscope,
+  Thermometer,
+  XCircle,
+} from 'lucide-react';
 import { apiRequest } from '../api.js';
-import { EstadoBadge, Panel, btnEmerald, inputCls } from './UiParts.jsx';
+import { EstadoBadge, Panel, SearchBar, btnEmerald, inputCls } from './UiParts.jsx';
 
 export function AgendaView({ token, mascotas = [], veterinarios = [], citas = [], onCreate, onPatch }) {
   const hoy = new Date().toISOString().slice(0, 10);
+  const [busqueda, setBusqueda] = useState('');
   const [form, setForm] = useState({
     mascota: '',
     veterinario: '',
@@ -40,9 +55,14 @@ export function AgendaView({ token, mascotas = [], veterinarios = [], citas = []
     }
   }
 
+  const q = busqueda.trim().toLowerCase();
+  const citasFiltradas = citas.filter(
+    (c) => !q || (c.mascota_nombre || '').toLowerCase().includes(q) || (c.veterinario_nombre || '').toLowerCase().includes(q) || (c.motivo || '').toLowerCase().includes(q)
+  );
+
   return (
     <div className="space-y-6">
-      <Panel title="Agendar Cita Médica" subtitle="Validación de jornada y anti-solapamiento en tiempo real">
+      <Panel title="Agendar Cita Médica" subtitle="Validación de jornada y anti-solapamiento en tiempo real" icon={CalendarPlus}>
         <form onSubmit={submitCita} className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <div>
             <label className="text-xs font-semibold text-slate-600">Paciente</label>
@@ -94,8 +114,11 @@ export function AgendaView({ token, mascotas = [], veterinarios = [], citas = []
             <input className={inputCls} required placeholder="Control general, vacunación..." value={form.motivo} onChange={(e) => setForm({ ...form, motivo: e.target.value })} />
           </div>
           {bloques.length > 0 && (
-            <div className="sm:col-span-2 lg:col-span-3">
-              <div className="text-xs font-semibold text-slate-600 mb-1.5">Bloques disponibles (clic para elegir):</div>
+            <div className="sm:col-span-2 lg:col-span-3 bg-slate-50 p-3 rounded-xl border border-slate-200/80">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 mb-2">
+                <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                Bloques disponibles (clic para elegir):
+              </div>
               <div className="flex flex-wrap gap-1.5">
                 {bloques.map((b) => (
                   <button
@@ -103,11 +126,11 @@ export function AgendaView({ token, mascotas = [], veterinarios = [], citas = []
                     key={b.hora}
                     disabled={!b.disponible}
                     onClick={() => setForm({ ...form, hora: b.hora })}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-mono border ${
+                    className={`px-2.5 py-1 rounded-lg text-xs font-mono border cursor-pointer ${
                       !b.disponible
                         ? 'bg-slate-100 text-slate-400 border-slate-200 line-through cursor-not-allowed'
                         : form.hora === b.hora
-                          ? 'bg-emerald-600 text-white border-emerald-600'
+                          ? 'bg-emerald-600 text-white border-emerald-600 font-semibold'
                           : 'bg-white text-slate-700 border-slate-300 hover:border-emerald-500'
                     }`}
                   >
@@ -117,16 +140,23 @@ export function AgendaView({ token, mascotas = [], veterinarios = [], citas = []
               </div>
             </div>
           )}
-          <div className="sm:col-span-2 lg:col-span-3 flex justify-end">
-            <button disabled={busy} className={btnEmerald}>+ Agendar Cita</button>
+          <div className="sm:col-span-2 lg:col-span-3 flex justify-end pt-1">
+            <button disabled={busy} className={btnEmerald}>
+              <Plus className="w-4 h-4" /> Agendar Cita
+            </button>
           </div>
         </form>
       </Panel>
 
-      <Panel title="Agenda de Citas Médicas" subtitle={`${citas.length} citas en historial`}>
+      <Panel
+        title="Agenda de Citas Médicas"
+        subtitle={`${citasFiltradas.length} citas en historial`}
+        icon={CalendarClock}
+        action={<SearchBar value={busqueda} onChange={setBusqueda} placeholder="Buscar paciente o veterinario..." />}
+      >
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+            <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wider text-slate-500">
               <tr>
                 <th className="px-4 py-3">Fecha / Hora</th>
                 <th className="px-4 py-3">Paciente</th>
@@ -137,24 +167,30 @@ export function AgendaView({ token, mascotas = [], veterinarios = [], citas = []
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {citas.map((c) => (
-                <tr key={c.id} className="hover:bg-slate-50">
+              {citasFiltradas.map((c) => (
+                <tr key={c.id} className="hover:bg-slate-50/80">
                   <td className="px-4 py-3">
                     <span className="font-semibold text-slate-800">{c.fecha}</span>{' '}
-                    <span className="text-xs font-mono text-slate-500">{String(c.hora).slice(0, 5)}</span>
+                    <span className="text-xs font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded">{String(c.hora).slice(0, 5)}</span>
                   </td>
                   <td className="px-4 py-3 font-semibold text-slate-900">{c.mascota_nombre}</td>
                   <td className="px-4 py-3 text-slate-700">Dr(a). {c.veterinario_nombre}</td>
                   <td className="px-4 py-3 text-slate-600">{c.motivo}</td>
                   <td className="px-4 py-3"><EstadoBadge estado={c.estado} /></td>
-                  <td className="px-4 py-3 text-right space-x-1">
+                  <td className="px-4 py-3 text-right space-x-1.5">
                     {c.estado === 'PROGRAMADA' && (
                       <>
-                        <button onClick={() => onPatch(`/citas/${c.id}/`, { estado: 'ASISTIO' }, 'Asistencia marcada.')} className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-semibold">
-                          ✓ Asistió
+                        <button
+                          onClick={() => onPatch(`/citas/${c.id}/`, { estado: 'ASISTIO' }, 'Asistencia marcada.')}
+                          className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-semibold cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Asistió
                         </button>
-                        <button onClick={() => onPatch(`/citas/${c.id}/`, { estado: 'NO_ASISTIO' }, 'Inasistencia registrada.')} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 font-semibold">
-                          ✕ No Asistió
+                        <button
+                          onClick={() => onPatch(`/citas/${c.id}/`, { estado: 'NO_ASISTIO' }, 'Inasistencia registrada.')}
+                          className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 font-semibold cursor-pointer"
+                        >
+                          <XCircle className="w-3.5 h-3.5" /> No Asistió
                         </button>
                       </>
                     )}
@@ -205,7 +241,7 @@ export function FichasView({ mascotas = [], veterinarios = [], lotes = [], ficha
 
   return (
     <div className="space-y-6">
-      <Panel title="Emitir Ficha Clínica Digital" subtitle="Descuenta automáticamente stock del lote FEFO seleccionado">
+      <Panel title="Emitir Ficha Clínica Digital" subtitle="Descuenta automáticamente stock del lote FEFO seleccionado" icon={FilePlus2}>
         <form onSubmit={submitFicha} className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div>
             <label className="text-xs font-semibold text-slate-600">Paciente</label>
@@ -226,7 +262,7 @@ export function FichasView({ mascotas = [], veterinarios = [], lotes = [], ficha
             <input className={inputCls} type="number" step="0.1" min="0.1" max="120" required value={form.peso_registrado} onChange={(e) => setForm({ ...form, peso_registrado: e.target.value })} />
           </div>
           <div>
-            <label className="text-xs font-semibold text-slate-600">Temp (°C)</label>
+            <label className="text-xs font-semibold text-slate-600">Temperatura (°C)</label>
             <input className={inputCls} type="number" step="0.1" min="35" max="43" required value={form.temperatura_c} onChange={(e) => setForm({ ...form, temperatura_c: e.target.value })} />
           </div>
           <div className="sm:col-span-2">
@@ -254,36 +290,43 @@ export function FichasView({ mascotas = [], veterinarios = [], lotes = [], ficha
             <label className="text-xs font-semibold text-slate-600">Receta / Posología</label>
             <input className={inputCls} placeholder="Opcional" value={form.receta_medica} onChange={(e) => setForm({ ...form, receta_medica: e.target.value })} />
           </div>
-          <div className="sm:col-span-2 lg:col-span-4 flex justify-end">
-            <button disabled={busy} className={btnEmerald}>+ Emitir Ficha Clínica</button>
+          <div className="sm:col-span-2 lg:col-span-4 flex justify-end pt-1">
+            <button disabled={busy} className={btnEmerald}>
+              <Plus className="w-4 h-4" /> Emitir Ficha Clínica
+            </button>
           </div>
         </form>
       </Panel>
 
-      <Panel title="Historial de Fichas Clínicas" subtitle={`${fichas.length} atenciones registradas`}>
+      <Panel title="Historial de Fichas Clínicas" subtitle={`${fichas.length} atenciones registradas`} icon={Stethoscope}>
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+            <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wider text-slate-500">
               <tr>
-                <th className="px-4 py-3">Ficha #</th>
+                <th className="px-4 py-3">Ficha</th>
                 <th className="px-4 py-3">Paciente</th>
                 <th className="px-4 py-3">Profesional</th>
+                <th className="px-4 py-3">Signos</th>
                 <th className="px-4 py-3">Diagnóstico</th>
                 <th className="px-4 py-3">Lote FEFO</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {fichas.map((f) => (
-                <tr key={f.id} className="hover:bg-slate-50">
+                <tr key={f.id} className="hover:bg-slate-50/80">
                   <td className="px-4 py-3 font-mono font-bold text-slate-700">#{f.id}</td>
                   <td className="px-4 py-3 font-semibold text-slate-900">{f.mascota_nombre}</td>
                   <td className="px-4 py-3 text-slate-600">Dr(a). {f.veterinario_nombre}</td>
+                  <td className="px-4 py-3 text-xs font-mono text-slate-700">
+                    <span className="inline-flex items-center gap-1 mr-2"><Scale className="w-3 h-3 text-slate-400" /> {f.peso_registrado}kg</span>
+                    <span className="inline-flex items-center gap-1"><Thermometer className="w-3 h-3 text-slate-400" /> {f.temperatura_c}°C</span>
+                  </td>
                   <td className="px-4 py-3 text-slate-700">{f.diagnostico}</td>
                   <td className="px-4 py-3 font-mono text-xs text-emerald-700">{f.lote_fefo_info || '—'}</td>
                 </tr>
               ))}
               {fichas.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">Sin fichas emitidas todavía.</td></tr>
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">Sin fichas emitidas todavía.</td></tr>
               )}
             </tbody>
           </table>
@@ -317,7 +360,7 @@ export function RecordatoriosView({ mascotas = [], recordatorios = [], onCreate,
 
   return (
     <div className="space-y-6">
-      <Panel title="Programar Vacuna, Examen o Control" subtitle="Alertas semafóricas de asistencia">
+      <Panel title="Programar Vacuna, Examen o Control" subtitle="Alertas semafóricas de asistencia" icon={BellPlus}>
         <form onSubmit={submitRec} className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <div>
             <label className="text-xs font-semibold text-slate-600">Paciente</label>
@@ -351,16 +394,18 @@ export function RecordatoriosView({ mascotas = [], recordatorios = [], onCreate,
             <label className="text-xs font-semibold text-slate-600">Observaciones</label>
             <input className={inputCls} placeholder="Indicaciones..." value={form.observaciones} onChange={(e) => setForm({ ...form, observaciones: e.target.value })} />
           </div>
-          <div className="sm:col-span-2 lg:col-span-3 flex justify-end">
-            <button disabled={busy} className={btnEmerald}>+ Programar Citatorio</button>
+          <div className="sm:col-span-2 lg:col-span-3 flex justify-end pt-1">
+            <button disabled={busy} className={btnEmerald}>
+              <Plus className="w-4 h-4" /> Programar Citatorio
+            </button>
           </div>
         </form>
       </Panel>
 
-      <Panel title="Recordatorios y Citatorios" subtitle={`${recordatorios.length} registros`}>
+      <Panel title="Recordatorios y Citatorios" subtitle={`${recordatorios.length} registros`} icon={BellRing}>
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+            <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wider text-slate-500">
               <tr>
                 <th className="px-4 py-3">Fecha / Hora</th>
                 <th className="px-4 py-3">Paciente</th>
@@ -371,17 +416,23 @@ export function RecordatoriosView({ mascotas = [], recordatorios = [], onCreate,
             </thead>
             <tbody className="divide-y divide-slate-100">
               {recordatorios.map((r) => (
-                <tr key={r.id} className="hover:bg-slate-50">
+                <tr key={r.id} className="hover:bg-slate-50/80">
                   <td className="px-4 py-3">{r.fecha_programada} <span className="text-xs font-mono text-slate-500">{String(r.hora_programada).slice(0, 5)}</span></td>
                   <td className="px-4 py-3 font-semibold text-slate-900">{r.mascota_nombre}</td>
                   <td className="px-4 py-3 text-slate-700">{r.nombre_vacuna_control}</td>
                   <td className="px-4 py-3"><EstadoBadge estado={r.estado_asistencia} /></td>
-                  <td className="px-4 py-3 text-right space-x-1">
-                    <button onClick={() => onPatch(`/recordatorios/${r.id}/`, { estado: 'ASISTIO', notificado: true }, 'Asistencia registrada.')} className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-semibold">
-                      Asistió
+                  <td className="px-4 py-3 text-right space-x-1.5">
+                    <button
+                      onClick={() => onPatch(`/recordatorios/${r.id}/`, { estado: 'ASISTIO', notificado: true }, 'Asistencia registrada.')}
+                      className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-semibold cursor-pointer"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Asistió
                     </button>
-                    <button onClick={() => onPatch(`/recordatorios/${r.id}/`, { estado: 'NO_ASISTIO', notificado: true }, 'Inasistencia registrada.')} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 font-semibold">
-                      No Asistió
+                    <button
+                      onClick={() => onPatch(`/recordatorios/${r.id}/`, { estado: 'NO_ASISTIO', notificado: true }, 'Inasistencia registrada.')}
+                      className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 font-semibold cursor-pointer"
+                    >
+                      <XCircle className="w-3.5 h-3.5" /> No Asistió
                     </button>
                   </td>
                 </tr>

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
+import { AlertTriangle, ArrowRight, CheckCircle2, Lock, User as UserIcon, Wifi, WifiOff, X } from 'lucide-react';
 import { API_URL, apiRequest } from './api.js';
 import Layout from './components/Layout.jsx';
 import DashboardView from './components/DashboardView.jsx';
 import PacientesView from './components/PacientesView.jsx';
 import { AgendaView, FichasView, RecordatoriosView } from './components/AgendaFichasView.jsx';
 import { CobrosView, FarmaciaView } from './components/FarmaciaCobrosView.jsx';
-import { btnEmerald, inputCls } from './components/UiParts.jsx';
+import { BrandMark, btnEmerald, inputCls } from './components/UiParts.jsx';
 
 export default function App() {
   const [token, setToken] = useState(() => localStorage.getItem('petcare_token') || '');
@@ -122,55 +123,69 @@ export default function App() {
   }
 
   if (!token) {
+    const online = health?.status === 'ok';
     return (
-      <div className="min-h-screen bg-[#0b1120] flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
-          <div className="bg-gradient-to-r from-[#0b1120] to-slate-800 px-7 py-6 text-white flex items-center justify-between">
+      <div className="min-h-screen bg-gradient-to-br from-[#070b14] via-[#0b1120] to-[#06281e] flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl shadow-black/40 overflow-hidden border border-white/10">
+          <div className="bg-gradient-to-r from-[#0b1120] to-slate-900 px-7 py-6 text-white flex items-center justify-between border-b border-slate-800">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-slate-950 flex items-center justify-center text-xl font-extrabold shadow-lg">
-                🐾
-              </div>
+              <BrandMark size="lg" />
               <div>
-                <h1 className="text-lg font-bold">PetCare Cloud</h1>
+                <h1 className="text-lg font-bold tracking-tight">PetCare Cloud</h1>
                 <p className="text-xs text-slate-300">Suite Clínica Veterinaria Modular</p>
               </div>
             </div>
-            <span className={`text-[11px] px-2.5 py-1 rounded-full font-semibold ${health?.status === 'ok' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
-              {health?.status === 'ok' ? '● En línea' : '● Offline'}
+            <span
+              className={`inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full font-semibold ${
+                online ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+              }`}
+            >
+              {online ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+              {online ? 'En línea' : 'Offline'}
             </span>
           </div>
 
           <form onSubmit={handleLogin} className="p-7 space-y-4">
-            <p className="text-xs text-slate-500">Conectado a <span className="font-mono">{API_URL}</span></p>
+            <div className="text-xs text-slate-500 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200/70">
+              API conectada: <span className="font-mono text-slate-700">{API_URL}</span>
+            </div>
             {aviso && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm">
-                {aviso.texto}
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{aviso.texto}</span>
               </div>
             )}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Usuario</label>
-              <input
-                type="text"
-                required
-                value={credenciales.username}
-                onChange={(e) => setCredenciales((c) => ({ ...c, username: e.target.value }))}
-                className={inputCls}
-                placeholder="admin"
-              />
+              <div className="relative">
+                <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  required
+                  value={credenciales.username}
+                  onChange={(e) => setCredenciales((c) => ({ ...c, username: e.target.value }))}
+                  className={`${inputCls} pl-9`}
+                  placeholder="admin"
+                />
+              </div>
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Contraseña</label>
-              <input
-                type="password"
-                required
-                value={credenciales.password}
-                onChange={(e) => setCredenciales((c) => ({ ...c, password: e.target.value }))}
-                className={inputCls}
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="password"
+                  required
+                  value={credenciales.password}
+                  onChange={(e) => setCredenciales((c) => ({ ...c, password: e.target.value }))}
+                  className={`${inputCls} pl-9`}
+                  placeholder="••••••••"
+                />
+              </div>
             </div>
             <button type="submit" disabled={cargando} className={`${btnEmerald} w-full py-2.5`}>
               {cargando ? 'Ingresando...' : 'Iniciar sesión en PetCare'}
+              <ArrowRight className="w-4 h-4" />
             </button>
           </form>
         </div>
@@ -184,12 +199,13 @@ export default function App() {
       setModulo={setModulo}
       user={user}
       health={health}
+      refreshing={cargando}
       onLogout={handleLogout}
       onRefresh={() => cargarTodo(token)}
     >
       {aviso && (
         <div
-          className={`mb-5 px-4 py-3 rounded-2xl border text-sm font-medium flex items-center justify-between ${
+          className={`mb-5 px-4 py-3 rounded-2xl border text-sm font-medium flex items-center justify-between gap-3 ${
             aviso.tipo === 'error'
               ? 'bg-rose-50 border-rose-200 text-rose-800'
               : aviso.tipo === 'warn'
@@ -197,13 +213,18 @@ export default function App() {
                 : 'bg-emerald-50 border-emerald-200 text-emerald-800'
           }`}
         >
-          <span>{aviso.texto}</span>
-          <button onClick={() => setAviso(null)} className="text-xs opacity-60 hover:opacity-100">✕</button>
+          <span className="flex items-center gap-2">
+            {aviso.tipo === 'ok' ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertTriangle className="w-4 h-4 shrink-0" />}
+            {aviso.texto}
+          </span>
+          <button onClick={() => setAviso(null)} className="opacity-60 hover:opacity-100 cursor-pointer">
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
       {cargando && !datos.metricas ? (
-        <div className="py-16 text-center text-slate-500 text-sm">Cargando módulos clínicos desde RDS...</div>
+        <div className="py-20 text-center text-slate-500 text-sm">Cargando módulos clínicos desde RDS...</div>
       ) : (
         <>
           {modulo === 'resumen' && (
