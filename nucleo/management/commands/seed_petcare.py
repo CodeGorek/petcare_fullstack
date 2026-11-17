@@ -61,6 +61,7 @@ class Command(BaseCommand):
         catalogo_fefo = [
             {
                 'codigo_lote': 'FEFO-2026-VAC8',
+                'codigo_barras': '7801000001011',
                 'nombre': 'Vacuna Óctuple Canina (Nobivac DHPPi+L)',
                 'categoria': 'VACUNA_BIO',
                 'presentacion': 'Frasco monodosis liofilizado 1 ml',
@@ -70,6 +71,7 @@ class Command(BaseCommand):
             },
             {
                 'codigo_lote': 'FEFO-2026-A1',
+                'codigo_barras': '7801000001028',
                 'nombre': 'Amoxicilina + Ácido Clavulánico 250 mg (Synulox)',
                 'categoria': 'MEDICAMENTO',
                 'presentacion': 'Caja x 10 comprimidos palatables',
@@ -79,6 +81,7 @@ class Command(BaseCommand):
             },
             {
                 'codigo_lote': 'FEFO-2026-MEL2',
+                'codigo_barras': '7801000001035',
                 'nombre': 'Meloxicam Inyectable 2% (Antiinflamatorio)',
                 'categoria': 'MEDICAMENTO',
                 'presentacion': 'Frasco ampolla multidosis 50 ml',
@@ -88,6 +91,7 @@ class Command(BaseCommand):
             },
             {
                 'codigo_lote': 'FEFO-2026-INS1',
+                'codigo_barras': '7801000001042',
                 'nombre': 'Solución Ringer Lactato Estéril + Bajada de Suero',
                 'categoria': 'INSUMO',
                 'presentacion': 'Matraz flexible 500 ml',
@@ -97,6 +101,7 @@ class Command(BaseCommand):
             },
             {
                 'codigo_lote': 'FEFO-2027-INS4',
+                'codigo_barras': '7801000001059',
                 'nombre': 'Catéter Intravenoso Veterinario 22G + Sutura Vicryl 3-0',
                 'categoria': 'INSUMO',
                 'presentacion': 'Sobre estéril individual',
@@ -106,6 +111,7 @@ class Command(BaseCommand):
             },
             {
                 'codigo_lote': 'FEFO-2027-B4',
+                'codigo_barras': '7801000001028',
                 'nombre': 'Amoxicilina + Ácido Clavulánico 250 mg (Lote Respaldo)',
                 'categoria': 'MEDICAMENTO',
                 'presentacion': 'Caja x 10 comprimidos palatables',

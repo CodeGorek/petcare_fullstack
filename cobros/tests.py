@@ -274,3 +274,24 @@ class CobrosTests(TestCase):
         with patch('django.core.signing.time.time', return_value=0):
             vencida = signing.dumps(pago.pk, salt='petcare.webpay.resultado')
         self.assertEqual(self.client.get(reverse('resultado_webpay', args=[vencida])).status_code, 400)
+
+    def test_api_crear_cuenta_con_multiples_servicios_al_mismo_tiempo(self):
+        admin = User.objects.create_superuser('admin_api', 'adminapi@example.com', 'test-only')
+        self.client.force_login(admin)
+        vacuna = ServicioClinico.objects.create(nombre='Vacunación', precio=8000)
+        resp = self.client.post(
+            '/api/cuentas/crear-desde-ficha/',
+            data={
+                'ficha_id': self.ficha.pk,
+                'items': [
+                    {'servicio_id': self.servicio.pk, 'cantidad': 1},
+                    {'servicio_id': vacuna.pk, 'cantidad': 2},
+                ],
+            },
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 201)
+        data = resp.json()
+        # 2x2000 (medicamento FEFO) + 1x15000 (Consulta) + 2x8000 (Vacunación) = 35000
+        self.assertEqual(data['total'], 35000)
+        self.assertEqual(len(data['detalles']), 3)

@@ -8,9 +8,11 @@ import {
   Clock,
   FilePlus2,
   Plus,
+  Printer,
   Scale,
   Stethoscope,
   Thermometer,
+  X,
   XCircle,
 } from 'lucide-react';
 import { apiRequest } from '../api.js';
@@ -206,6 +208,7 @@ export function AgendaView({ token, mascotas = [], veterinarios = [], citas = []
 }
 
 export function FichasView({ mascotas = [], veterinarios = [], lotes = [], fichas = [], onCreate }) {
+  const [fichaModal, setFichaModal] = useState(null);
   const [form, setForm] = useState({
     mascota: '',
     veterinario: '',
@@ -241,6 +244,42 @@ export function FichasView({ mascotas = [], veterinarios = [], lotes = [], ficha
 
   return (
     <div className="space-y-6">
+      {fichaModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-base">Reporte Ficha Clínica #{fichaModal.id}</h3>
+                <p className="text-xs text-slate-300">Paciente: {fichaModal.mascota_nombre} · Dr(a). {fichaModal.veterinario_nombre}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => window.print()} className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 font-semibold cursor-pointer">
+                  <Printer className="w-3.5 h-3.5" /> Imprimir
+                </button>
+                <button onClick={() => setFichaModal(null)} className="p-1.5 rounded-lg hover:bg-white/10 cursor-pointer">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <div><span className="text-xs text-slate-500">Peso registrado:</span> <strong className="font-mono">{fichaModal.peso_registrado} kg</strong></div>
+                <div><span className="text-xs text-slate-500">Temperatura:</span> <strong className="font-mono">{fichaModal.temperatura_c} °C</strong></div>
+              </div>
+              <div><strong className="text-xs uppercase text-slate-500 block">Diagnóstico</strong><p className="text-slate-800 mt-0.5">{fichaModal.diagnostico}</p></div>
+              <div><strong className="text-xs uppercase text-slate-500 block">Tratamiento</strong><p className="text-slate-800 mt-0.5">{fichaModal.tratamiento}</p></div>
+              {fichaModal.receta_medica && (
+                <div><strong className="text-xs uppercase text-slate-500 block">Receta / Posología</strong><p className="text-slate-800 mt-0.5">{fichaModal.receta_medica}</p></div>
+              )}
+              {fichaModal.lote_fefo_info && (
+                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 font-mono">
+                  Dispensado Lote FEFO: {fichaModal.lote_fefo_info} · {fichaModal.cantidad_dispensada} u.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       <Panel title="Emitir Ficha Clínica Digital" subtitle="Descuenta automáticamente stock del lote FEFO seleccionado" icon={FilePlus2}>
         <form onSubmit={submitFicha} className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div>
@@ -309,6 +348,7 @@ export function FichasView({ mascotas = [], veterinarios = [], lotes = [], ficha
                 <th className="px-4 py-3">Signos</th>
                 <th className="px-4 py-3">Diagnóstico</th>
                 <th className="px-4 py-3">Lote FEFO</th>
+                <th className="px-4 py-3 text-right">Reporte</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -323,10 +363,18 @@ export function FichasView({ mascotas = [], veterinarios = [], lotes = [], ficha
                   </td>
                   <td className="px-4 py-3 text-slate-700">{f.diagnostico}</td>
                   <td className="px-4 py-3 font-mono text-xs text-emerald-700">{f.lote_fefo_info || '—'}</td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={() => setFichaModal(f)}
+                      className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 font-semibold cursor-pointer"
+                    >
+                      <Printer className="w-3.5 h-3.5" /> Detalle
+                    </button>
+                  </td>
                 </tr>
               ))}
               {fichas.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">Sin fichas emitidas todavía.</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400">Sin fichas emitidas todavía.</td></tr>
               )}
             </tbody>
           </table>

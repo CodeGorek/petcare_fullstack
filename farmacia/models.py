@@ -11,6 +11,7 @@ class LoteMedicamento(models.Model):
     ]
     nombre = models.CharField('Medicamento / Insumo', max_length=120)
     categoria = models.CharField('Categoría', max_length=20, choices=CATEGORIAS, default='MEDICAMENTO')
+    codigo_barras = models.CharField('Código de Barras (EAN / SKU)', max_length=64, blank=True, db_index=True)
     codigo_lote = models.CharField('Código de Lote (Norma FEFO)', max_length=50, unique=True)
     presentacion = models.CharField('Presentación / Concentración', max_length=80, default='Comprimidos / Frasco Ampolla')
     fecha_vencimiento = models.DateField('Fecha Límite Vencimiento (FEFO)')

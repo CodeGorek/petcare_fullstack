@@ -1,7 +1,10 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from .forms import LoteMedicamentoForm
 from .models import LoteMedicamento
@@ -42,3 +45,31 @@ def ajustar_stock_lote(request, pk, accion):
 class LoteMedicamentoViewSet(viewsets.ModelViewSet):
     queryset = LoteMedicamento.objects.all().order_by('fecha_vencimiento')
     serializer_class = LoteMedicamentoSerializer
+
+    @action(detail=False, methods=['get'], url_path='buscar-codigo')
+    def buscar_codigo(self, request):
+        """Search lots by barcode, lot code, or medication name and return total FEFO stock and price."""
+        codigo = (request.query_params.get('codigo') or '').strip()
+        if not codigo:
+            return Response({'encontrado': False, 'total_stock': 0, 'precio_unitario': None, 'lotes': []})
+
+        lotes = LoteMedicamento.objects.filter(
+            Q(codigo_barras__iexact=codigo) | Q(codigo_lote__iexact=codigo)
+        ).order_by('fecha_vencimiento')
+        if not lotes.exists():
+            lotes = LoteMedicamento.objects.filter(
+                Q(codigo_barras__icontains=codigo) | Q(codigo_lote__icontains=codigo) | Q(nombre__icontains=codigo)
+            ).order_by('fecha_vencimiento')
+
+        serializados = self.get_serializer(lotes, many=True).data
+        activos_vigentes = [l for l in lotes if l.activo and not l.esta_vencido]
+        total_stock = sum(l.stock_disponible for l in activos_vigentes)
+        precio_ref = next((l.precio_unitario for l in lotes if l.precio_unitario), None)
+
+        return Response({
+            'encontrado': len(serializados) > 0,
+            'codigo_consultado': codigo,
+            'total_stock': total_stock,
+            'precio_unitario': precio_ref,
+            'lotes': serializados,
+        })

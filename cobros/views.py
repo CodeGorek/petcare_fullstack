@@ -12,7 +12,9 @@ from django.urls import reverse
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST, require_http_methods
-from rest_framework import viewsets
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from agenda.models import FichaClinica
 from farmacia.models import LoteMedicamento
@@ -248,3 +250,104 @@ class ServicioClinicoViewSet(viewsets.ModelViewSet):
 class CuentaAtencionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = CuentaAtencion.objects.select_related('ficha').prefetch_related('detalles', 'pagos').all()
     serializer_class = CuentaAtencionSerializer
+
+    @staticmethod
+    def _agregar_items(cuenta, items):
+        if not isinstance(items, list):
+            raise ValueError('El listado de servicios debe ser una lista.')
+        agregados = 0
+        for item in items:
+            servicio_id = item.get('servicio_id')
+            try:
+                cantidad = int(item.get('cantidad', 1))
+            except (TypeError, ValueError):
+                raise ValueError('Cantidad inválida en los servicios seleccionados.')
+            if not 1 <= cantidad <= 100:
+                raise ValueError('La cantidad de cada servicio debe estar entre 1 y 100.')
+            servicio = get_object_or_404(ServicioClinico, pk=servicio_id, activo=True)
+            DetalleCuenta.objects.create(
+                cuenta=cuenta,
+                descripcion=servicio.nombre,
+                cantidad=cantidad,
+                precio_unitario=servicio.precio,
+            )
+            agregados += 1
+        return agregados
+
+    @action(detail=False, methods=['post'], url_path='crear-desde-ficha')
+    def crear_desde_ficha(self, request):
+        """Create or update a bill from a clinical record and attach multiple services at once."""
+        ficha_id = request.data.get('ficha_id')
+        items = request.data.get('items') or []
+        if not ficha_id:
+            return Response({'detail': 'Debes indicar ficha_id.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            ficha = get_object_or_404(FichaClinica.objects.select_for_update(), pk=ficha_id)
+            cuenta = CuentaAtencion.objects.filter(ficha=ficha).select_for_update().first()
+            if not cuenta:
+                lote = ficha.medicamento_fefo
+                if lote and ficha.cantidad_dispensada and not lote.precio_unitario:
+                    return Response(
+                        {'detail': 'El medicamento dispensado no tiene precio unitario asignado.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                cuenta = CuentaAtencion.objects.create(ficha=ficha)
+                if lote and ficha.cantidad_dispensada:
+                    DetalleCuenta.objects.create(
+                        cuenta=cuenta,
+                        descripcion=f'{lote.nombre} — Lote {lote.codigo_lote}',
+                        cantidad=ficha.cantidad_dispensada,
+                        precio_unitario=lote.precio_unitario,
+                        medicamento=True,
+                    )
+            elif not cuenta.editable:
+                return Response(
+                    {'detail': 'La cuenta está bloqueada porque ya tiene un pago en proceso o aprobado.'},
+                    status=status.HTTP_409_CONFLICT,
+                )
+
+            try:
+                self._agregar_items(cuenta, items)
+            except ValueError as exc:
+                transaction.set_rollback(True)
+                return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        cuenta.refresh_from_db()
+        return Response(self.get_serializer(cuenta).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], url_path='agregar-servicios')
+    def agregar_servicios(self, request, pk=None):
+        """Attach one or more clinical services to an existing editable account."""
+        items = request.data.get('items') or []
+        if not items:
+            return Response({'detail': 'Selecciona al menos un servicio.'}, status=status.HTTP_400_BAD_REQUEST)
+        with transaction.atomic():
+            cuenta = get_object_or_404(CuentaAtencion.objects.select_for_update(), pk=pk)
+            if not cuenta.editable:
+                return Response(
+                    {'detail': 'La cuenta está bloqueada porque tiene un pago en proceso o aprobado.'},
+                    status=status.HTTP_409_CONFLICT,
+                )
+            try:
+                self._agregar_items(cuenta, items)
+            except ValueError as exc:
+                transaction.set_rollback(True)
+                return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        cuenta.refresh_from_db()
+        return Response(self.get_serializer(cuenta).data)
+
+    @action(detail=True, methods=['delete'], url_path=r'quitar-detalle/(?P<detalle_id>[^/.]+)')
+    def quitar_detalle_api(self, request, pk=None, detalle_id=None):
+        """Remove a non-medication service line from an editable account."""
+        with transaction.atomic():
+            cuenta = get_object_or_404(CuentaAtencion.objects.select_for_update(), pk=pk)
+            detalle = get_object_or_404(DetalleCuenta, pk=detalle_id, cuenta=cuenta)
+            if not cuenta.editable or detalle.medicamento:
+                return Response(
+                    {'detail': 'No se puede quitar un medicamento dispensado ni modificar una cuenta bloqueada.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            detalle.delete()
+        cuenta.refresh_from_db()
+        return Response(self.get_serializer(cuenta).data)

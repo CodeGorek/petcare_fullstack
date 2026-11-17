@@ -19,10 +19,12 @@ class DetalleCuentaSerializer(serializers.ModelSerializer):
 
 class CuentaAtencionSerializer(serializers.ModelSerializer):
     detalles = DetalleCuentaSerializer(many=True, read_only=True)
+    mascota_nombre = serializers.CharField(source='ficha.mascota.nombre', read_only=True)
+    tutor_nombre = serializers.CharField(source='ficha.mascota.tutor.nombre_completo', read_only=True)
     total = serializers.ReadOnlyField()
     pagada = serializers.ReadOnlyField()
     editable = serializers.ReadOnlyField()
 
     class Meta:
         model = CuentaAtencion
-        fields = ['id', 'ficha', 'creada_en', 'total', 'pagada', 'editable', 'detalles']
+        fields = ['id', 'ficha', 'mascota_nombre', 'tutor_nombre', 'creada_en', 'total', 'pagada', 'editable', 'detalles']

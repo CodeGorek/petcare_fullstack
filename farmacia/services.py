@@ -11,6 +11,7 @@ def asegurar_catalogo_fefo_inicial():
     iniciales = [
         {
             'codigo_lote': 'FEFO-2026-VAC8',
+            'codigo_barras': '7801000001011',
             'nombre': 'Vacuna Óctuple Canina (Nobivac DHPPi+L)',
             'categoria': 'VACUNA_BIO',
             'presentacion': 'Frasco monodosis liofilizado 1 ml',
@@ -20,6 +21,7 @@ def asegurar_catalogo_fefo_inicial():
         },
         {
             'codigo_lote': 'FEFO-2026-SYN1',
+            'codigo_barras': '7801000001028',
             'nombre': 'Amoxicilina + Ácido Clavulánico 250 mg (Synulox)',
             'categoria': 'MEDICAMENTO',
             'presentacion': 'Caja x 10 comprimidos palatables',
@@ -29,6 +31,7 @@ def asegurar_catalogo_fefo_inicial():
         },
         {
             'codigo_lote': 'FEFO-2026-MEL2',
+            'codigo_barras': '7801000001035',
             'nombre': 'Meloxicam Inyectable 2% (Metacam)',
             'categoria': 'MEDICAMENTO',
             'presentacion': 'Frasco ampolla multidosis 50 ml',

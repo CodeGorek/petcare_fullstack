@@ -45,3 +45,23 @@ export async function apiRequest(endpoint, { method = 'GET', token = '', body = 
 export function formatClp(valor) {
   return `$${Number(valor || 0).toLocaleString('es-CL')}`;
 }
+
+export function validarRutChileno(rut) {
+  const limpio = String(rut || '').toUpperCase().replace(/[.\s]/g, '');
+  if (!/^\d{7,8}-[\dK]$/.test(limpio)) {
+    return 'Formato de RUT inválido (ej: 18456789-K).';
+  }
+  const [cuerpo, dv] = limpio.split('-');
+  let suma = 0;
+  let multiplo = 2;
+  for (let i = cuerpo.length - 1; i >= 0; i -= 1) {
+    suma += Number(cuerpo[i]) * multiplo;
+    multiplo = multiplo === 7 ? 2 : multiplo + 1;
+  }
+  const resto = 11 - (suma % 11);
+  const esperado = resto === 11 ? '0' : resto === 10 ? 'K' : String(resto);
+  if (dv !== esperado) {
+    return `RUT inválido (dígito verificador debería ser -${esperado}).`;
+  }
+  return '';
+}

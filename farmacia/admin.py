@@ -6,9 +6,9 @@ from .models import LoteMedicamento
 
 @admin.register(LoteMedicamento)
 class LoteMedicamentoAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'codigo_lote', 'fecha_vencimiento', 'stock_disponible', 'badge_fefo')
-    list_filter = ('activo', 'fecha_vencimiento')
-    search_fields = ('nombre', 'codigo_lote')
+    list_display = ('nombre', 'codigo_barras', 'codigo_lote', 'fecha_vencimiento', 'stock_disponible', 'precio_unitario', 'badge_fefo')
+    list_filter = ('activo', 'categoria', 'fecha_vencimiento')
+    search_fields = ('nombre', 'codigo_barras', 'codigo_lote')
 
     @admin.display(description='Prioridad Norma FEFO')
     def badge_fefo(self, obj):

@@ -91,6 +91,10 @@ export default function App() {
     }
   }
 
+  async function handleNotify(tipo, texto) {
+    setAviso({ tipo, texto });
+  }
+
   async function handleLogin(e) {
     e.preventDefault();
     setAviso(null);
@@ -237,7 +241,15 @@ export default function App() {
             />
           )}
           {modulo === 'pacientes' && (
-            <PacientesView tutores={datos.tutores} mascotas={datos.mascotas} onCreate={handleCreate} onPatch={handlePatch} />
+            <PacientesView
+              tutores={datos.tutores}
+              mascotas={datos.mascotas}
+              citas={datos.citas}
+              fichas={datos.fichas}
+              recordatorios={datos.recordatorios}
+              onCreate={handleCreate}
+              onPatch={handlePatch}
+            />
           )}
           {modulo === 'agenda' && (
             <AgendaView token={token} mascotas={datos.mascotas} veterinarios={datos.veterinarios} citas={datos.citas} onCreate={handleCreate} onPatch={handlePatch} />
@@ -249,10 +261,18 @@ export default function App() {
             <RecordatoriosView mascotas={datos.mascotas} recordatorios={datos.recordatorios} onCreate={handleCreate} onPatch={handlePatch} />
           )}
           {modulo === 'farmacia' && (
-            <FarmaciaView lotes={datos.lotes} onCreate={handleCreate} onPatch={handlePatch} />
+            <FarmaciaView token={token} lotes={datos.lotes} onCreate={handleCreate} onPatch={handlePatch} />
           )}
           {modulo === 'cobros' && (
-            <CobrosView servicios={datos.servicios} cuentas={datos.cuentas} onCreate={handleCreate} />
+            <CobrosView
+              token={token}
+              servicios={datos.servicios}
+              cuentas={datos.cuentas}
+              fichas={datos.fichas}
+              onCreate={handleCreate}
+              onNotify={handleNotify}
+              onReload={() => cargarTodo(token)}
+            />
           )}
         </>
       )}
