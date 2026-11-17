@@ -187,7 +187,7 @@ export default function DashboardView({ metricas, citas = [], lotes = [], fichas
               <tbody className="divide-y divide-slate-100">
                 {citas.slice(0, 5).map((c) => (
                   <tr key={c.id} className="hover:bg-slate-50/80">
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="font-semibold text-slate-800 text-xs">{c.fecha}</div>
                       <span className="inline-block text-[11px] font-mono bg-slate-900 text-white px-2 py-0.5 rounded-md mt-0.5">
                         {String(c.hora).slice(0, 5)}
@@ -236,8 +236,8 @@ export default function DashboardView({ metricas, citas = [], lotes = [], fichas
                       <div className="font-semibold text-slate-800 text-xs sm:text-sm">{l.nombre}</div>
                       <div className="text-[11px] font-mono text-slate-500">{l.codigo_lote}</div>
                     </td>
-                    <td className="px-4 py-3 text-xs font-mono text-slate-700">{l.fecha_vencimiento}</td>
-                    <td className="px-4 py-3 font-bold text-slate-900">{l.stock_disponible} u.</td>
+                    <td className="px-4 py-3 text-xs font-mono text-slate-700 whitespace-nowrap">{l.fecha_vencimiento}</td>
+                    <td className="px-4 py-3 font-bold text-slate-900 whitespace-nowrap">{l.stock_disponible} u.</td>
                     <td className="px-4 py-3"><EstadoBadge estado={l.estado_fefo} /></td>
                   </tr>
                 ))}

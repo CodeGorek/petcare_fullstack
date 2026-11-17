@@ -59,7 +59,7 @@ export function KpiCard({ title, value, subtitle, icon: Icon, badge, tone = 'eme
 export function Panel({ title, subtitle, icon: Icon, action, children }) {
   return (
     <section className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
-      <div className="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50/40">
+      <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3 bg-slate-50/40">
         <div className="flex items-center gap-2.5 min-w-0">
           {Icon && (
             <div className="w-8 h-8 rounded-lg bg-white border border-slate-200/80 text-slate-700 flex items-center justify-center shrink-0 shadow-2xs">
@@ -71,7 +71,7 @@ export function Panel({ title, subtitle, icon: Icon, action, children }) {
             {subtitle && <p className="text-xs text-slate-500 truncate">{subtitle}</p>}
           </div>
         </div>
-        {action}
+        {action && <div className="shrink-0">{action}</div>}
       </div>
       <div>{children}</div>
     </section>
@@ -123,15 +123,15 @@ export function EstadoBadge({ estado }) {
     CANCELADA: 'bg-slate-400',
   };
   const labels = {
-    PRIORIDAD_FEFO_ALTA: '1° en salir (FEFO ≤30d)',
-    BLOQUEADO_VENCIDO: 'Vencido (Bloqueado)',
+    PRIORIDAD_FEFO_ALTA: '1° Salir · ≤30d',
+    BLOQUEADO_VENCIDO: 'Vencido',
     FEFO_NORMAL: 'Vigente FEFO',
     NO_ASISTIO: 'No Asistió',
     ASISTIO: 'Asistió',
   };
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${styles[estado] || 'bg-slate-100 text-slate-700 border-slate-200'}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${dotColor[estado] || 'bg-slate-400'}`} />
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border whitespace-nowrap ${styles[estado] || 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColor[estado] || 'bg-slate-400'}`} />
       {labels[estado] || estado}
     </span>
   );
