@@ -69,10 +69,7 @@ bash infra/deploy_frontend_ec2.sh
 ## 6. `Lambda` + `Trigger` + `SNS`
 
 1. Crear un **Topic en Amazon SNS** (ej. `petcare-backups-alertas`) y suscribir tu correo electrónico (confirmar el correo de suscripción).
-2. Empaquetar `lambda/backup_rds_s3.py` junto con `psycopg2-binary` (o usar una Lambda Layer de `psycopg2`) y configurar el handler como `backup_rds_s3.lambda_handler`.
-3. Variables de entorno de la Lambda:
-   - `DB_HOST`, `DB_PORT=5432`, `DB_NAME=petcare_db`, `DB_USER`, `DB_PASSWORD`
-   - `S3_BUCKET=<tu-bucket>`
-   - `S3_STORAGE_CLASS=GLACIER_IR` (o `STANDARD_IA`)
-   - `SNS_TOPIC_ARN=<arn-de-tu-topic-sns>`
-4. Agregar un **Trigger de EventBridge** (ej. `cron(0 3 * * ? *)` para respaldo diario) y un permiso IAM con acceso `s3:PutObject` al bucket y `sns:Publish` al topic.
+2. En AWS Academy (`voclabs`), usa el rol `LabRole` para la Lambda. Tienes dos modos listos en `lambda/backup_rds_s3.py`:
+   - **Modo directo en el editor web (sin subir ZIP y sin NAT Gateway):** pega el contenido de `lambda/backup_rds_s3.py` en la consola de AWS Lambda (handler `lambda_function.lambda_handler` si conservas el archivo por defecto o `backup_rds_s3.lambda_handler`) y configura `BACKEND_API_URL=http://<IP_BACKEND>/api`, `BACKEND_API_TOKEN=<tu_token>`, `S3_BUCKET=<tu-bucket>`, `S3_STORAGE_CLASS=GLACIER_IR`, `SNS_TOPIC_ARN=<arn-sns>`.
+   - **Modo directo a RDS dentro de la VPC:** empaqueta con `bash lambda/build_lambda_zip.sh` y configura `DB_HOST`, `DB_PORT=5432`, `DB_NAME=petcare_db`, `DB_USER`, `DB_PASSWORD`, `S3_BUCKET` y `SNS_TOPIC_ARN` (requiere S3 Gateway Endpoint / acceso a SNS).
+3. Agregar un **Trigger de EventBridge** (ej. `cron(0 3 * * ? *)` para respaldo diario) y un evento S3 en `fotos/` si deseas notificar nuevas imágenes.

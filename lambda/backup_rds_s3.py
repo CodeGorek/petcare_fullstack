@@ -1,8 +1,9 @@
-"""AWS Lambda serverless handler for PetCare RDS backups to S3, S3 image events, and SNS alerts."""
+"""AWS Lambda serverless handler for PetCare backups to S3, S3 image triggers, API Gateway, and SNS alerts."""
 import gzip
 import json
 import logging
 import os
+import urllib.request
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
@@ -23,7 +24,7 @@ TABLAS_RESPALDO = (
 
 
 def _exportar_resumen_rds(db_connect=None):
-    """Collect row counts and snapshot metadata from PostgreSQL RDS."""
+    """Collect row counts directly from PostgreSQL RDS."""
     if db_connect is None:
         import psycopg2
         conn = psycopg2.connect(
@@ -45,7 +46,31 @@ def _exportar_resumen_rds(db_connect=None):
                 tablas[tabla] = cur.fetchone()[0]
     finally:
         conn.close()
-    return tablas
+    return {'fuente': 'rds_postgresql', 'tablas': tablas}
+
+
+def _fetch_json(url, token=''):
+    headers = {'Accept': 'application/json'}
+    if token:
+        headers['Authorization'] = f'Token {token}'
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=8) as resp:
+        return json.loads(resp.read().decode('utf-8'))
+
+
+def _exportar_desde_api(api_url, token='', fetcher=_fetch_json):
+    """Collect clinical snapshot from the Backend API (works outside VPC with zero extra packages)."""
+    base = api_url.rstrip('/')
+    salud = fetcher(f'{base}/health/', '')
+    resumen = {'salud': salud}
+    if token:
+        resumen['metricas'] = fetcher(f'{base}/metricas/', token)
+        for recurso in ('tutores', 'mascotas', 'citas', 'medicamentos-fefo', 'cuentas'):
+            try:
+                resumen[recurso] = fetcher(f'{base}/{recurso}/', token)
+            except Exception as exc:
+                resumen[recurso] = {'error': str(exc)}
+    return {'fuente': 'backend_api', 'datos': resumen}
 
 
 def _publicar_sns(sns_client, topic_arn, subject, payload):
@@ -63,7 +88,7 @@ def _aws_clients():
     return boto3.client('s3'), boto3.client('sns')
 
 
-def lambda_handler(event, context=None, s3_client=None, sns_client=None, db_connect=None):
+def lambda_handler(event, context=None, s3_client=None, sns_client=None, db_connect=None, http_fetcher=None):
     """Handle EventBridge backup triggers, S3 image upload triggers, and API Gateway heavy tasks."""
     event = event or {}
     if s3_client is None or sns_client is None:
@@ -74,9 +99,11 @@ def lambda_handler(event, context=None, s3_client=None, sns_client=None, db_conn
     bucket = os.environ.get('S3_BUCKET', '')
     topic_arn = os.environ.get('SNS_TOPIC_ARN', '')
     storage_class = os.environ.get('S3_STORAGE_CLASS', 'STANDARD_IA')
+    api_url = os.environ.get('BACKEND_API_URL', '')
+    api_token = os.environ.get('BACKEND_API_TOKEN', '')
     ahora = datetime.now(timezone.utc)
 
-    # Mode 1: S3 trigger when new image/photo arrives under estaticos/fotos/
+    # Mode 1: S3 trigger when new image/photo arrives under fotos/
     if 'Records' in event and event['Records'] and 's3' in event['Records'][0]:
         record = event['Records'][0]['s3']
         key = record['object']['key']
@@ -89,12 +116,18 @@ def lambda_handler(event, context=None, s3_client=None, sns_client=None, db_conn
     is_http = 'httpMethod' in event or 'requestContext' in event
 
     try:
-        tablas = _exportar_resumen_rds(db_connect=db_connect)
+        if db_connect is not None or os.environ.get('DB_HOST'):
+            contenido = _exportar_resumen_rds(db_connect=db_connect)
+        elif api_url:
+            contenido = _exportar_desde_api(api_url, token=api_token, fetcher=http_fetcher or _fetch_json)
+        else:
+            contenido = {'fuente': 'snapshot_basico', 'nota': 'Configura DB_HOST o BACKEND_API_URL para respaldo completo.'}
+
         snapshot = {
             'proyecto': 'PetCare',
             'generado_en': ahora.isoformat(),
             'origen': 'api_gateway' if is_http else 'eventbridge_trigger',
-            'tablas': tablas,
+            **contenido,
         }
         body_gz = gzip.compress(json.dumps(snapshot, ensure_ascii=False).encode('utf-8'))
         s3_key = f"respaldos/petcare_backup_{ahora.strftime('%Y%m%d_%H%M%S')}.json.gz"
@@ -114,9 +147,9 @@ def lambda_handler(event, context=None, s3_client=None, sns_client=None, db_conn
             's3_key': s3_key,
             'storage_class': storage_class,
             'bytes_comprimidos': len(body_gz),
-            'tablas': tablas,
+            **contenido,
         }
-        _publicar_sns(sns_client, topic_arn, 'PetCare Backup RDS -> S3 completado', resultado)
+        _publicar_sns(sns_client, topic_arn, 'PetCare Backup -> S3 completado', resultado)
 
         if is_http:
             return {

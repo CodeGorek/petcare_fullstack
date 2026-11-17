@@ -47,7 +47,7 @@ source "$PROJECT_PATH/venv/bin/activate"
 pip install --upgrade pip
 pip install -r "$PROJECT_PATH/requirements.txt"
 
-mkdir -p "$PROJECT_PATH/staticfiles"
+mkdir -p "$PROJECT_PATH/static" "$PROJECT_PATH/staticfiles"
 python manage.py migrate --noinput
 python manage.py collectstatic --noinput
 python manage.py seed_petcare

@@ -46,8 +46,26 @@ class LambdaBackupTests(unittest.TestCase):
         )
         self.assertEqual(res['status'], 'ok')
         self.assertEqual(res['storage_class'], 'GLACIER_IR')
+        self.assertEqual(res['fuente'], 'rds_postgresql')
         s3.put_object.assert_called_once()
         self.assertEqual(s3.put_object.call_args.kwargs['Bucket'], 'petcare-respaldos')
+        sns.publish.assert_called_once()
+
+    @patch.dict(os.environ, {'DB_HOST': '', 'S3_BUCKET': 'petcare-respaldos', 'SNS_TOPIC_ARN': 'arn:aws:sns:us-east-1:123:backup', 'BACKEND_API_URL': 'http://100.63.46.73/api', 'BACKEND_API_TOKEN': 'tok-demo'})
+    def test_respaldo_via_api_sin_vpc(self):
+        s3 = MagicMock()
+        sns = MagicMock()
+        fake_fetch = MagicMock(return_value={'status': 'ok'})
+        res = backup_mod.lambda_handler(
+            {'source': 'aws.events'},
+            s3_client=s3,
+            sns_client=sns,
+            http_fetcher=fake_fetch,
+        )
+        self.assertEqual(res['status'], 'ok')
+        self.assertEqual(res['fuente'], 'backend_api')
+        self.assertGreaterEqual(fake_fetch.call_count, 2)
+        s3.put_object.assert_called_once()
         sns.publish.assert_called_once()
 
     @patch.dict(os.environ, {'S3_BUCKET': 'petcare-respaldos', 'SNS_TOPIC_ARN': 'arn:aws:sns:us-east-1:123:backup'})
