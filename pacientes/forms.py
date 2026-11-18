@@ -38,11 +38,12 @@ class MascotaForm(BootstrapFormMixin, forms.ModelForm):
 
     class Meta:
         model = Mascota
-        fields = ['tutor', 'nombre', 'especie', 'raza', 'sexo', 'fecha_nacimiento', 'peso_kg', 'alergias_conocidas']
+        fields = ['tutor', 'nombre', 'especie', 'raza', 'sexo', 'fecha_nacimiento', 'peso_kg', 'alergias_conocidas', 'foto_url']
         widgets = {
             'nombre': forms.TextInput(attrs={'placeholder': 'Ej: Thor', 'pattern': r'^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s]{2,80}$'}),
             'raza': forms.TextInput(attrs={'placeholder': 'Ej: Pastor Alemán', 'minlength': '2'}),
             'fecha_nacimiento': forms.DateInput(attrs={'type': 'date', 'max': date.today().isoformat()}),
             'peso_kg': forms.NumberInput(attrs={'step': '0.1', 'min': '0.1', 'max': '120', 'placeholder': '0.1 - 120 kg'}),
             'alergias_conocidas': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Alergias a fármacos o condiciones previas...'}),
+            'foto_url': forms.URLInput(attrs={'placeholder': 'https://tu-bucket.s3.amazonaws.com/fotos/thor.jpg'}),
         }

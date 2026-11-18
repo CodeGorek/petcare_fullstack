@@ -57,6 +57,7 @@ class Mascota(models.Model):
         validators=[MinValueValidator(Decimal('0.10')), MaxValueValidator(Decimal('120.00'))]
     )
     alergias_conocidas = models.TextField('Alergias / Observaciones', blank=True)
+    foto_url = models.URLField('URL Foto (S3 / CDN)', max_length=500, blank=True)
     activo = models.BooleanField('Paciente Activo', default=True)
 
     class Meta:

@@ -26,6 +26,16 @@ class NucleoTests(TestCase):
         bloqueado = self.client.get(reverse('api_health'), HTTP_ORIGIN='https://otro.example.com')
         self.assertNotIn('Access-Control-Allow-Origin', bloqueado)
 
+    @override_settings(RATE_LIMIT_PER_MIN=2)
+    def test_rate_limit_mitiga_rafagas(self):
+        from nucleo.middleware import RateLimitMiddleware
+        RateLimitMiddleware._hits.clear()
+        self.assertEqual(self.client.get(reverse('api_health')).status_code, 200)
+        self.assertEqual(self.client.get(reverse('api_health')).status_code, 200)
+        tercera = self.client.get(reverse('api_health'))
+        self.assertEqual(tercera.status_code, 429)
+        RateLimitMiddleware._hits.clear()
+
     def test_dashboard_y_metricas_requieren_login(self):
         self.assertEqual(self.client.get(reverse('dashboard')).status_code, 302)
         user = User.objects.create_user('recepcion', password='test-only')
