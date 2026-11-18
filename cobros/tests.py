@@ -295,3 +295,22 @@ class CobrosTests(TestCase):
         # 2x2000 (medicamento FEFO) + 1x15000 (Consulta) + 2x8000 (Vacunación) = 35000
         self.assertEqual(data['total'], 35000)
         self.assertEqual(len(data['detalles']), 3)
+
+    @patch('cobros.views.cliente_webpay')
+    def test_api_iniciar_y_verificar_webpay(self, sdk):
+        admin = User.objects.create_superuser('admin_wp', 'wp@example.com', 'test-only')
+        self.client.force_login(admin)
+        cuenta = self.crear_cuenta()
+        sdk.return_value.create.return_value = {
+            'url': 'https://webpay3gint.transbank.cl/webpayserver/initTransaction',
+            'token': 'tok-sim-123',
+        }
+        iniciar = self.client.post(f'/api/cuentas/{cuenta.pk}/iniciar-webpay/')
+        self.assertEqual(iniciar.status_code, 201)
+        self.assertEqual(iniciar.json()['token'], 'tok-sim-123')
+
+        pago = PagoWebpay.objects.get(token='tok-sim-123')
+        sdk.return_value.commit.return_value = self.resultado(pago)
+        verificar = self.client.post(f'/api/cuentas/{cuenta.pk}/verificar-pago/')
+        self.assertEqual(verificar.status_code, 200)
+        self.assertTrue(verificar.json()['pagada'])

@@ -14,6 +14,7 @@ import {
   RefreshCw,
   ShieldCheck,
   Stethoscope,
+  Users,
   X,
 } from 'lucide-react';
 import { API_URL, BACKEND_ORIGIN, S3_STATIC_URL } from '../api.js';
@@ -34,7 +35,14 @@ const NAV_ITEMS = [
     section: 'Farmacia y Cobros',
     items: [
       { id: 'farmacia', label: 'Farmacia FEFO', icon: Pill },
-      { id: 'cobros', label: 'Servicios y Cobros', icon: CreditCard },
+      { id: 'cobros', label: 'Servicios y Cobros', icon: CreditCard, adminOnly: true },
+    ],
+  },
+  {
+    section: 'Administración',
+    adminOnly: true,
+    items: [
+      { id: 'usuarios', label: 'Usuarios y Personal', icon: Users, adminOnly: true },
     ],
   },
 ];
@@ -42,6 +50,14 @@ const NAV_ITEMS = [
 export default function Layout({ modulo, setModulo, user, health, refreshing, onLogout, onRefresh, children }) {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [logoFallback, setLogoFallback] = useState(false);
+  const esRoot = Boolean(user?.is_superuser);
+  const navVisibles = NAV_ITEMS
+    .filter((group) => !group.adminOnly || esRoot)
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !item.adminOnly || esRoot),
+    }))
+    .filter((group) => group.items.length > 0);
 
   const sidebarContent = (
     <div className="flex flex-col h-full bg-[#0b1120] text-slate-400 border-r border-white/5">
@@ -72,7 +88,7 @@ export default function Layout({ modulo, setModulo, user, health, refreshing, on
       </div>
 
       <div className="flex-1 overflow-y-auto py-4">
-        {NAV_ITEMS.map((group) => (
+        {navVisibles.map((group) => (
           <div key={group.section} className="mb-4">
             <div className="px-5 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
               {group.section}
@@ -103,35 +119,37 @@ export default function Layout({ modulo, setModulo, user, health, refreshing, on
           </div>
         ))}
 
-        <div className="px-3 mt-4 pt-3 border-t border-white/5">
-          <div className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-            Infraestructura & Admin
+        {esRoot && (
+          <div className="px-3 mt-4 pt-3 border-t border-white/5">
+            <div className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+              Infraestructura & Admin
+            </div>
+            <a
+              href={`${BACKEND_ORIGIN}/admin/`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center justify-between px-3.5 py-2 rounded-xl text-xs text-slate-300 hover:bg-white/5 hover:text-white transition"
+            >
+              <span className="flex items-center gap-2.5">
+                <ShieldCheck className="w-4 h-4 text-slate-400" />
+                Django Admin
+              </span>
+              <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+            </a>
+            <a
+              href={`${API_URL}/`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center justify-between px-3.5 py-2 rounded-xl text-xs text-slate-300 hover:bg-white/5 hover:text-white transition"
+            >
+              <span className="flex items-center gap-2.5">
+                <Code2 className="w-4 h-4 text-slate-400" />
+                API REST (DRF)
+              </span>
+              <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+            </a>
           </div>
-          <a
-            href={`${BACKEND_ORIGIN}/admin/`}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center justify-between px-3.5 py-2 rounded-xl text-xs text-slate-300 hover:bg-white/5 hover:text-white transition"
-          >
-            <span className="flex items-center gap-2.5">
-              <ShieldCheck className="w-4 h-4 text-slate-400" />
-              Django Admin
-            </span>
-            <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-          </a>
-          <a
-            href={`${API_URL}/`}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center justify-between px-3.5 py-2 rounded-xl text-xs text-slate-300 hover:bg-white/5 hover:text-white transition"
-          >
-            <span className="flex items-center gap-2.5">
-              <Code2 className="w-4 h-4 text-slate-400" />
-              API REST (DRF)
-            </span>
-            <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-          </a>
-        </div>
+        )}
       </div>
 
       <div className="p-4 border-t border-white/10 bg-slate-950/50">

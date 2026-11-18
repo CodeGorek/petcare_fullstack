@@ -11,6 +11,7 @@ PROJECT_PATH=$(pwd)
 FRONTEND_DIR="$PROJECT_PATH/frontend"
 API_URL=${API_URL:?"Debes definir API_URL apuntando al API Gateway o EC2 Backend (ej. http://IP_BACKEND/api)"}
 S3_STATIC_URL=${S3_STATIC_URL:-""}
+BACKEND_URL=${BACKEND_URL:-""}
 
 sudo apt-get update
 sudo apt-get install -y curl nginx
@@ -23,6 +24,7 @@ cd "$FRONTEND_DIR"
 cat << ENVEOF > "$FRONTEND_DIR/.env.production"
 VITE_API_URL=$API_URL
 VITE_S3_STATIC_URL=$S3_STATIC_URL
+VITE_BACKEND_URL=$BACKEND_URL
 ENVEOF
 
 npm ci

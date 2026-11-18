@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Clock,
   FilePlus2,
+  MessageCircle,
   Plus,
   Printer,
   Scale,
@@ -15,7 +16,7 @@ import {
   X,
   XCircle,
 } from 'lucide-react';
-import { apiRequest } from '../api.js';
+import { apiRequest, whatsappUrl } from '../api.js';
 import { EstadoBadge, Panel, SearchBar, btnEmerald, inputCls } from './UiParts.jsx';
 
 export function AgendaView({ token, mascotas = [], veterinarios = [], citas = [], onCreate, onPatch }) {
@@ -179,7 +180,23 @@ export function AgendaView({ token, mascotas = [], veterinarios = [], citas = []
                   <td className="px-4 py-3 text-slate-700">Dr(a). {c.veterinario_nombre}</td>
                   <td className="px-4 py-3 text-slate-600">{c.motivo}</td>
                   <td className="px-4 py-3"><EstadoBadge estado={c.estado} /></td>
-                  <td className="px-4 py-3 text-right space-x-1.5">
+                  <td className="px-4 py-3 text-right space-x-1.5 whitespace-nowrap">
+                    {whatsappUrl(
+                      c.tutor_telefono,
+                      `Hola ${c.tutor_nombre || 'tutor'}, te recordamos la cita de ${c.mascota_nombre} el ${c.fecha} a las ${String(c.hora).slice(0, 5)} hrs en Clínica PetCare.`
+                    ) && (
+                      <a
+                        href={whatsappUrl(
+                          c.tutor_telefono,
+                          `Hola ${c.tutor_nombre || 'tutor'}, te recordamos la cita de ${c.mascota_nombre} el ${c.fecha} a las ${String(c.hora).slice(0, 5)} hrs en Clínica PetCare.`
+                        )}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 font-semibold"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
+                      </a>
+                    )}
                     {c.estado === 'PROGRAMADA' && (
                       <>
                         <button
@@ -359,7 +376,9 @@ export function FichasView({ mascotas = [], veterinarios = [], lotes = [], ficha
                   <td className="px-4 py-3 text-slate-600">Dr(a). {f.veterinario_nombre}</td>
                   <td className="px-4 py-3 text-xs font-mono text-slate-700">
                     <span className="inline-flex items-center gap-1 mr-2"><Scale className="w-3 h-3 text-slate-400" /> {f.peso_registrado}kg</span>
-                    <span className="inline-flex items-center gap-1"><Thermometer className="w-3 h-3 text-slate-400" /> {f.temperatura_c}°C</span>
+                    <span className={`inline-flex items-center gap-1 ${Number(f.temperatura_c) >= 39.2 ? 'text-rose-600 font-bold' : ''}`}>
+                      <Thermometer className="w-3 h-3" /> {f.temperatura_c}°C{Number(f.temperatura_c) >= 39.2 ? ' (Fiebre)' : ''}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-slate-700">{f.diagnostico}</td>
                   <td className="px-4 py-3 font-mono text-xs text-emerald-700">{f.lote_fefo_info || '—'}</td>
@@ -469,7 +488,23 @@ export function RecordatoriosView({ mascotas = [], recordatorios = [], onCreate,
                   <td className="px-4 py-3 font-semibold text-slate-900">{r.mascota_nombre}</td>
                   <td className="px-4 py-3 text-slate-700">{r.nombre_vacuna_control}</td>
                   <td className="px-4 py-3"><EstadoBadge estado={r.estado_asistencia} /></td>
-                  <td className="px-4 py-3 text-right space-x-1.5">
+                  <td className="px-4 py-3 text-right space-x-1.5 whitespace-nowrap">
+                    {whatsappUrl(
+                      r.tutor_telefono,
+                      `Hola ${r.tutor_nombre || 'tutor'}, recordatorio PetCare: ${r.nombre_vacuna_control} para ${r.mascota_nombre} el ${r.fecha_programada} a las ${String(r.hora_programada).slice(0, 5)} hrs.`
+                    ) && (
+                      <a
+                        href={whatsappUrl(
+                          r.tutor_telefono,
+                          `Hola ${r.tutor_nombre || 'tutor'}, recordatorio PetCare: ${r.nombre_vacuna_control} para ${r.mascota_nombre} el ${r.fecha_programada} a las ${String(r.hora_programada).slice(0, 5)} hrs.`
+                        )}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 font-semibold"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
+                      </a>
+                    )}
                     <button
                       onClick={() => onPatch(`/recordatorios/${r.id}/`, { estado: 'ASISTIO', notificado: true }, 'Asistencia registrada.')}
                       className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-semibold cursor-pointer"

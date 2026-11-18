@@ -4,6 +4,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from rest_framework import viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .forms import LoteMedicamentoForm
@@ -45,6 +46,7 @@ def ajustar_stock_lote(request, pk, accion):
 class LoteMedicamentoViewSet(viewsets.ModelViewSet):
     queryset = LoteMedicamento.objects.all().order_by('fecha_vencimiento')
     serializer_class = LoteMedicamentoSerializer
+    permission_classes = [IsAuthenticated]
 
     @action(detail=False, methods=['get'], url_path='buscar-codigo')
     def buscar_codigo(self, request):

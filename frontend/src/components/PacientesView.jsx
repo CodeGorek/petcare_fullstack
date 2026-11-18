@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { FolderOpen, Mail, MapPin, PawPrint, Phone, Plus, Power, Printer, UserPlus, Users, X } from 'lucide-react';
-import { validarRutChileno } from '../api.js';
+import { FolderOpen, Mail, MapPin, MessageCircle, PawPrint, Phone, Plus, Power, Printer, UserPlus, Users, X } from 'lucide-react';
+import { validarEmail, validarRutChileno, whatsappUrl } from '../api.js';
 import { EstadoBadge, Panel, SearchBar, btnEmerald, inputCls } from './UiParts.jsx';
 
 export default function PacientesView({
@@ -14,6 +14,7 @@ export default function PacientesView({
 }) {
   const [busqueda, setBusqueda] = useState('');
   const [rutError, setRutError] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [expedienteMascota, setExpedienteMascota] = useState(null);
   const [tutorForm, setTutorForm] = useState({
     rut: '',
@@ -38,11 +39,14 @@ export default function PacientesView({
   async function submitTutor(e) {
     e.preventDefault();
     const err = validarRutChileno(tutorForm.rut);
-    if (err) {
+    const eErr = validarEmail(tutorForm.email);
+    if (err || eErr) {
       setRutError(err);
+      setEmailError(eErr);
       return;
     }
     setRutError('');
+    setEmailError('');
     setBusy(true);
     try {
       await onCreate('/tutores/', tutorForm, 'Tutor registrado correctamente.');
@@ -75,6 +79,10 @@ export default function PacientesView({
   const citasExp = expedienteMascota ? citas.filter((c) => c.mascota === expedienteMascota.id) : [];
   const fichasExp = expedienteMascota ? fichas.filter((f) => f.mascota === expedienteMascota.id) : [];
   const recExp = expedienteMascota ? recordatorios.filter((r) => r.mascota === expedienteMascota.id) : [];
+  const tutorExp = expedienteMascota ? tutores.find((t) => t.id === expedienteMascota.tutor) : null;
+  const waExp = tutorExp
+    ? whatsappUrl(tutorExp.telefono, `Hola ${tutorExp.nombre_completo}, te escribimos de Clínica PetCare por el expediente de ${expedienteMascota?.nombre}.`)
+    : '';
 
   return (
     <div className="space-y-6">
@@ -89,6 +97,16 @@ export default function PacientesView({
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                {waExp && (
+                  <a
+                    href={waExp}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-[#25D366] text-slate-950 hover:opacity-90 font-bold"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" /> WhatsApp Tutor
+                  </a>
+                )}
                 <button onClick={() => window.print()} className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 font-semibold cursor-pointer">
                   <Printer className="w-3.5 h-3.5" /> Imprimir
                 </button>
@@ -184,7 +202,19 @@ export default function PacientesView({
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-600">Correo</label>
-              <input className={inputCls} type="email" required placeholder="tutor@correo.cl" value={tutorForm.email} onChange={(e) => setTutorForm({ ...tutorForm, email: e.target.value })} />
+              <input
+                className={`${inputCls} ${emailError ? 'border-rose-400' : ''}`}
+                type="email"
+                required
+                placeholder="tutor@correo.cl"
+                value={tutorForm.email}
+                onChange={(e) => {
+                  setTutorForm({ ...tutorForm, email: e.target.value });
+                  if (emailError) setEmailError(validarEmail(e.target.value));
+                }}
+                onBlur={(e) => setEmailError(e.target.value ? validarEmail(e.target.value) : '')}
+              />
+              {emailError && <p className="text-[11px] text-rose-600 mt-1">{emailError}</p>}
             </div>
             <div className="sm:col-span-2">
               <label className="text-xs font-semibold text-slate-600">Dirección</label>
@@ -342,7 +372,17 @@ export default function PacientesView({
                     <div className="flex items-center gap-1.5"><Mail className="w-3 h-3 text-slate-400" /> {t.email}</div>
                   </td>
                   <td className="px-4 py-3"><EstadoBadge estado={t.activo ? 'ACTIVO' : 'INACTIVO'} /></td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-right space-x-1.5 whitespace-nowrap">
+                    {whatsappUrl(t.telefono, `Hola ${t.nombre_completo}, te contactamos desde Clínica Veterinaria PetCare.`) && (
+                      <a
+                        href={whatsappUrl(t.telefono, `Hola ${t.nombre_completo}, te contactamos desde Clínica Veterinaria PetCare.`)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 font-semibold"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
+                      </a>
+                    )}
                     <button
                       onClick={() => onPatch(`/tutores/${t.id}/`, { activo: !t.activo }, `Estado de ${t.nombre_completo} actualizado.`)}
                       className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 font-semibold cursor-pointer"

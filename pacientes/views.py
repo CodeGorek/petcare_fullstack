@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from rest_framework import viewsets
+from rest_framework.permissions import IsAuthenticated
 
 from .forms import MascotaForm, TutorForm
 from .models import Mascota, Tutor
@@ -112,8 +113,10 @@ def expediente_mascota(request, pk):
 class TutorViewSet(viewsets.ModelViewSet):
     queryset = Tutor.objects.all()
     serializer_class = TutorSerializer
+    permission_classes = [IsAuthenticated]
 
 
 class MascotaViewSet(viewsets.ModelViewSet):
     queryset = Mascota.objects.select_related('tutor').all()
     serializer_class = MascotaSerializer
+    permission_classes = [IsAuthenticated]

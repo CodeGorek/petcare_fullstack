@@ -12,6 +12,8 @@ class VeterinarioSerializer(serializers.ModelSerializer):
 class CitaMedicaSerializer(serializers.ModelSerializer):
     mascota_nombre = serializers.CharField(source='mascota.nombre', read_only=True)
     veterinario_nombre = serializers.CharField(source='veterinario.nombre', read_only=True)
+    tutor_nombre = serializers.CharField(source='mascota.tutor.nombre_completo', read_only=True)
+    tutor_telefono = serializers.CharField(source='mascota.tutor.telefono', read_only=True)
 
     class Meta:
         model = CitaMedica
@@ -30,6 +32,8 @@ class FichaClinicaSerializer(serializers.ModelSerializer):
 
 class RecordatorioVacunaSerializer(serializers.ModelSerializer):
     mascota_nombre = serializers.CharField(source='mascota.nombre', read_only=True)
+    tutor_nombre = serializers.CharField(source='mascota.tutor.nombre_completo', read_only=True)
+    tutor_telefono = serializers.CharField(source='mascota.tutor.telefono', read_only=True)
     estado_asistencia = serializers.ReadOnlyField()
 
     class Meta:

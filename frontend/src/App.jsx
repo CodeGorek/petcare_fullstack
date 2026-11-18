@@ -6,6 +6,8 @@ import DashboardView from './components/DashboardView.jsx';
 import PacientesView from './components/PacientesView.jsx';
 import { AgendaView, FichasView, RecordatoriosView } from './components/AgendaFichasView.jsx';
 import { CobrosView, FarmaciaView } from './components/FarmaciaCobrosView.jsx';
+import PetCareBot from './components/PetCareBot.jsx';
+import UsuariosView from './components/UsuariosView.jsx';
 import { BrandMark, btnEmerald, inputCls } from './components/UiParts.jsx';
 
 export default function App() {
@@ -28,14 +30,14 @@ export default function App() {
     apiRequest('/health/').then(setHealth).catch(() => setHealth({ status: 'offline' }));
   }, []);
 
-  const cargarTodo = useCallback(async (activeToken) => {
+  const cargarTodo = useCallback(async (activeToken, activeUser) => {
     if (!activeToken) return;
     setCargando(true);
     try {
       const metricas = await apiRequest('/metricas/', { token: activeToken });
       let extra = {};
       try {
-        const [tutores, mascotas, veterinarios, citas, fichas, recordatorios, lotes, servicios, cuentas] = await Promise.all([
+        const requests = [
           apiRequest('/tutores/', { token: activeToken }),
           apiRequest('/mascotas/', { token: activeToken }),
           apiRequest('/veterinarios/', { token: activeToken }),
@@ -43,13 +45,44 @@ export default function App() {
           apiRequest('/fichas/', { token: activeToken }),
           apiRequest('/recordatorios/', { token: activeToken }),
           apiRequest('/medicamentos-fefo/', { token: activeToken }),
-          apiRequest('/servicios/', { token: activeToken }),
-          apiRequest('/cuentas/', { token: activeToken }),
-        ]);
-        extra = { tutores, mascotas, veterinarios, citas, fichas, recordatorios, lotes, servicios, cuentas };
+        ];
+        if (activeUser?.is_superuser) {
+          requests.push(
+            apiRequest('/servicios/', { token: activeToken }),
+            apiRequest('/cuentas/', { token: activeToken }),
+            apiRequest('/usuarios/', { token: activeToken }),
+            apiRequest('/novedades-personal/', { token: activeToken })
+          );
+        }
+        const [
+          tutores,
+          mascotas,
+          veterinarios,
+          citas,
+          fichas,
+          recordatorios,
+          lotes,
+          servicios,
+          cuentas,
+          usuarios,
+          novedadesPersonal,
+        ] = await Promise.all(requests);
+        extra = {
+          tutores,
+          mascotas,
+          veterinarios,
+          citas,
+          fichas,
+          recordatorios,
+          lotes,
+          servicios: servicios || [],
+          cuentas: cuentas || [],
+          usuarios: usuarios || [],
+          novedadesPersonal: novedadesPersonal || [],
+        };
       } catch (err) {
         if (err.status === 403) {
-          setAviso({ tipo: 'warn', texto: 'Tu cuenta no tiene permisos administrativos para listar recursos CRUD en /api/.' });
+          setAviso({ tipo: 'warn', texto: 'Tu cuenta no tiene permisos administrativos para listar ciertos recursos.' });
         } else {
           throw err;
         }
@@ -64,16 +97,16 @@ export default function App() {
 
   useEffect(() => {
     if (token) {
-      cargarTodo(token);
+      cargarTodo(token, user);
     }
-  }, [token, cargarTodo]);
+  }, [token, user, cargarTodo]);
 
   async function handleCreate(endpoint, body, successMsg) {
     setAviso(null);
     try {
       await apiRequest(endpoint, { method: 'POST', token, body });
       setAviso({ tipo: 'ok', texto: successMsg });
-      await cargarTodo(token);
+      await cargarTodo(token, user);
     } catch (err) {
       setAviso({ tipo: 'error', texto: err.message });
       throw err;
@@ -85,7 +118,7 @@ export default function App() {
     try {
       await apiRequest(endpoint, { method: 'PATCH', token, body });
       setAviso({ tipo: 'ok', texto: successMsg });
-      await cargarTodo(token);
+      await cargarTodo(token, user);
     } catch (err) {
       setAviso({ tipo: 'error', texto: err.message });
     }
@@ -103,6 +136,7 @@ export default function App() {
       const resp = await apiRequest('/auth/login/', { method: 'POST', body: credenciales });
       localStorage.setItem('petcare_token', resp.token);
       localStorage.setItem('petcare_user', JSON.stringify(resp.user));
+      setModulo('resumen');
       setToken(resp.token);
       setUser(resp.user);
       setCredenciales({ username: '', password: '' });
@@ -119,6 +153,7 @@ export default function App() {
     } finally {
       localStorage.removeItem('petcare_token');
       localStorage.removeItem('petcare_user');
+      setModulo('resumen');
       setToken('');
       setUser(null);
       setDatos({});
@@ -205,7 +240,7 @@ export default function App() {
       health={health}
       refreshing={cargando}
       onLogout={handleLogout}
-      onRefresh={() => cargarTodo(token)}
+      onRefresh={() => cargarTodo(token, user)}
     >
       {aviso && (
         <div
@@ -233,10 +268,12 @@ export default function App() {
         <>
           {modulo === 'resumen' && (
             <DashboardView
+              isAdmin={Boolean(user?.is_superuser)}
               metricas={datos.metricas}
               citas={datos.citas}
               lotes={datos.lotes}
               fichas={datos.fichas}
+              cuentas={datos.cuentas}
               onNavigate={setModulo}
             />
           )}
@@ -263,19 +300,41 @@ export default function App() {
           {modulo === 'farmacia' && (
             <FarmaciaView token={token} lotes={datos.lotes} onCreate={handleCreate} onPatch={handlePatch} />
           )}
-          {modulo === 'cobros' && (
+          {modulo === 'cobros' && user?.is_superuser && (
             <CobrosView
               token={token}
+              isAdmin={Boolean(user?.is_superuser)}
               servicios={datos.servicios}
               cuentas={datos.cuentas}
               fichas={datos.fichas}
               onCreate={handleCreate}
               onNotify={handleNotify}
-              onReload={() => cargarTodo(token)}
+              onReload={() => cargarTodo(token, user)}
+            />
+          )}
+          {modulo === 'usuarios' && user?.is_superuser && (
+            <UsuariosView
+              token={token}
+              usuarios={datos.usuarios}
+              novedades={datos.novedadesPersonal}
+              currentUserId={user?.id}
+              onCreate={handleCreate}
+              onNotify={handleNotify}
+              onReload={() => cargarTodo(token, user)}
             />
           )}
         </>
       )}
+      <PetCareBot
+        isAdmin={Boolean(user?.is_superuser)}
+        metricas={datos.metricas}
+        citas={datos.citas}
+        lotes={datos.lotes}
+        recordatorios={datos.recordatorios}
+        cuentas={datos.cuentas}
+        novedades={datos.novedadesPersonal}
+        onNavigate={setModulo}
+      />
     </Layout>
   );
 }

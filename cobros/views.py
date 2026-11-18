@@ -18,6 +18,7 @@ from rest_framework.response import Response
 
 from agenda.models import FichaClinica
 from farmacia.models import LoteMedicamento
+from usuarios.permissions import EsRootPermission
 from .forms import PrecioMedicamentoForm, ServicioCuentaForm, ServicioForm
 from .models import CuentaAtencion, DetalleCuenta, PagoWebpay, ServicioClinico
 from .serializers import CuentaAtencionSerializer, ServicioClinicoSerializer
@@ -117,44 +118,52 @@ def quitar_detalle(request, pk, detalle_id):
     return redirect('cuenta_detalle', pk=pk)
 
 
+def _crear_transaccion_webpay(cuenta):
+    """Validate billable state and initialize a single simulated Transbank Webpay transaction."""
+    if cuenta.pagada:
+        return None, ('info', 'Esta cuenta ya tiene un pago de prueba aprobado.'), status.HTTP_409_CONFLICT
+    if cuenta.pagos.filter(estado='INICIADO').exists():
+        return None, ('warning', 'Ya hay un pago en proceso. Verifica su resultado antes de volver a pagar.'), status.HTTP_409_CONFLICT
+    total = cuenta.total
+    if not 1 <= total <= 999999999:
+        return None, ('error', 'El total debe estar entre $1 y $999.999.999 CLP.'), status.HTTP_400_BAD_REQUEST
+
+    pago = PagoWebpay.objects.create(
+        cuenta=cuenta,
+        monto=total,
+        orden_compra='PC' + uuid4().hex[:24],
+        sesion=uuid4().hex,
+    )
+    try:
+        retorno = settings.WEBPAY_BASE_URL + reverse('retorno_webpay')
+        respuesta = cliente_webpay().create(pago.orden_compra, pago.sesion, pago.monto, retorno)
+        url = respuesta['url']
+        parsed = urlparse(url)
+        if parsed.scheme != 'https' or parsed.hostname != 'webpay3gint.transbank.cl':
+            raise ValueError('El destino no pertenece al ambiente oficial de integración.')
+        if not isinstance(respuesta.get('token'), str) or not 1 <= len(respuesta['token']) <= 64:
+            raise ValueError('Webpay no devolvió un token válido.')
+        pago.token = respuesta['token']
+        pago.url_webpay = url
+        pago.save()
+        return pago, None, status.HTTP_201_CREATED
+    except Exception:
+        # A failed create never gave the user a checkout link, so retry is safe.
+        logger.warning('No fue posible iniciar Webpay para cuenta %s', cuenta.pk)
+        pago.estado = 'ERROR'
+        pago.save(update_fields=['estado', 'actualizado_en'])
+        return None, ('error', 'No se pudo iniciar Webpay de prueba. Reintenta en unos momentos.'), status.HTTP_502_BAD_GATEWAY
+
+
 @login_required
 @require_POST
 def iniciar_webpay(request, pk):
     with transaction.atomic():
         cuenta = get_object_or_404(CuentaAtencion.objects.select_for_update(), pk=pk)
-        if cuenta.pagada:
-            messages.info(request, 'Esta cuenta ya tiene un pago de prueba aprobado.')
-            return redirect('cuenta_detalle', pk=pk)
-        existente = cuenta.pagos.filter(estado='INICIADO').first()
-        if existente:
-            messages.warning(request, 'Ya hay un pago en proceso. Verifica su resultado antes de volver a pagar.')
-            return redirect('cuenta_detalle', pk=pk)
-        total = cuenta.total
-        if not 1 <= total <= 999999999:
-            messages.error(request, 'El total debe estar entre $1 y $999.999.999 CLP.')
-            return redirect('cuenta_detalle', pk=pk)
-        pago = PagoWebpay.objects.create(
-            cuenta=cuenta, monto=total,
-            orden_compra='PC' + uuid4().hex[:24], sesion=uuid4().hex,
-        )
-        try:
-            retorno = settings.WEBPAY_BASE_URL + reverse('retorno_webpay')
-            respuesta = cliente_webpay().create(pago.orden_compra, pago.sesion, pago.monto, retorno)
-            url = respuesta['url']
-            parsed = urlparse(url)
-            if parsed.scheme != 'https' or parsed.hostname != 'webpay3gint.transbank.cl':
-                raise ValueError('El destino no pertenece al ambiente oficial de integración.')
-            if not isinstance(respuesta.get('token'), str) or not 1 <= len(respuesta['token']) <= 64:
-                raise ValueError('Webpay no devolvió un token válido.')
-            pago.token = respuesta['token']
-            pago.url_webpay = url
-            pago.save()
-        except Exception:
-            # A failed create never gave the user a checkout link, so retry is safe.
-            logger.warning('No fue posible iniciar Webpay para cuenta %s', pk)
-            pago.estado = 'ERROR'
-            pago.save(update_fields=['estado', 'actualizado_en'])
-            messages.error(request, 'No se pudo iniciar Webpay de prueba. Reintenta en unos momentos.')
+        pago, error_info, _ = _crear_transaccion_webpay(cuenta)
+        if error_info:
+            nivel, texto = error_info
+            getattr(messages, nivel)(request, texto)
             return redirect('cuenta_detalle', pk=pk)
     return render(request, 'clinica/webpay_redireccion.html', {'pago': pago})
 
@@ -245,11 +254,13 @@ def verificar_pago(request, pk, pago_id):
 class ServicioClinicoViewSet(viewsets.ModelViewSet):
     queryset = ServicioClinico.objects.all()
     serializer_class = ServicioClinicoSerializer
+    permission_classes = [EsRootPermission]
 
 
 class CuentaAtencionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = CuentaAtencion.objects.select_related('ficha').prefetch_related('detalles', 'pagos').all()
     serializer_class = CuentaAtencionSerializer
+    permission_classes = [EsRootPermission]
 
     @staticmethod
     def _agregar_items(cuenta, items):
@@ -349,5 +360,42 @@ class CuentaAtencionViewSet(viewsets.ReadOnlyModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
             detalle.delete()
+        cuenta.refresh_from_db()
+        return Response(self.get_serializer(cuenta).data)
+
+    @action(detail=True, methods=['post'], url_path='iniciar-webpay')
+    def iniciar_webpay_api(self, request, pk=None):
+        """Start a simulated Transbank Webpay Test transaction for decoupled React clients."""
+        with transaction.atomic():
+            cuenta = get_object_or_404(CuentaAtencion.objects.select_for_update(), pk=pk)
+            pago, error_info, code = _crear_transaccion_webpay(cuenta)
+            if error_info:
+                _, texto = error_info
+                return Response({'detail': texto}, status=code)
+        return Response(
+            {
+                'pago_id': pago.pk,
+                'orden_compra': pago.orden_compra,
+                'monto': pago.monto,
+                'token': pago.token,
+                'url': pago.url_webpay,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(detail=True, methods=['post'], url_path='verificar-pago')
+    def verificar_pago_api(self, request, pk=None):
+        """Reconcile the latest pending Webpay transaction against Transbank Test API."""
+        cuenta = get_object_or_404(CuentaAtencion, pk=pk)
+        pago = cuenta.pagos.filter(estado='INICIADO').first()
+        if not pago:
+            return Response(self.get_serializer(cuenta).data)
+        try:
+            confirmar_pago(pago.pk)
+        except Exception:
+            return Response(
+                {'detail': 'El resultado sigue pendiente de verificación en Transbank.'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
         cuenta.refresh_from_db()
         return Response(self.get_serializer(cuenta).data)

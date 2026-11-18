@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import {
+  AlertTriangle,
   Barcode,
   Boxes,
   Camera,
@@ -12,6 +13,7 @@ import {
   Pill,
   Plus,
   Receipt,
+  RefreshCw,
   ScanBarcode,
   Search,
   Tags,
@@ -23,6 +25,7 @@ import { EstadoBadge, Panel, SearchBar, btnEmerald, inputCls } from './UiParts.j
 
 export function FarmaciaView({ token, lotes = [], onCreate, onPatch }) {
   const [busqueda, setBusqueda] = useState('');
+  const [filtroFefo, setFiltroFefo] = useState('TODOS');
   const [codigoScan, setCodigoScan] = useState('');
   const [resultadoScan, setResultadoScan] = useState(null);
   const [buscandoScan, setBuscandoScan] = useState(false);
@@ -154,16 +157,56 @@ export function FarmaciaView({ token, lotes = [], onCreate, onPatch }) {
   }
 
   const q = busqueda.trim().toLowerCase();
-  const lotesFiltrados = lotes.filter(
-    (l) =>
+  const lotesStockCritico = lotes.filter((l) => l.stock_disponible <= 5 && l.estado_fefo !== 'BLOQUEADO_VENCIDO');
+  const lotesPorVencer = lotes.filter((l) => l.estado_fefo === 'PRIORIDAD_FEFO_ALTA');
+  const lotesVencidos = lotes.filter((l) => l.estado_fefo === 'BLOQUEADO_VENCIDO');
+
+  const lotesFiltrados = lotes.filter((l) => {
+    const matchTexto =
       !q ||
       l.nombre.toLowerCase().includes(q) ||
       l.codigo_lote.toLowerCase().includes(q) ||
-      (l.codigo_barras || '').toLowerCase().includes(q)
-  );
+      (l.codigo_barras || '').toLowerCase().includes(q);
+    if (!matchTexto) return false;
+    if (filtroFefo === 'CRITICO') return l.stock_disponible <= 5 && l.estado_fefo !== 'BLOQUEADO_VENCIDO';
+    if (filtroFefo === 'ALERTAS') return l.estado_fefo !== 'FEFO_NORMAL';
+    return true;
+  });
 
   return (
     <div className="space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <button
+          type="button"
+          onClick={() => setFiltroFefo(filtroFefo === 'CRITICO' ? 'TODOS' : 'CRITICO')}
+          className={`text-left rounded-2xl p-4 border transition cursor-pointer ${
+            filtroFefo === 'CRITICO' ? 'bg-amber-50 border-amber-400 shadow-sm' : 'bg-white border-slate-200 hover:border-amber-300'
+          }`}
+        >
+          <div className="flex items-center justify-between text-xs font-semibold text-amber-800">
+            <span>Stock Crítico (≤ 5 u.)</span>
+            <AlertTriangle className="w-4 h-4 text-amber-600" />
+          </div>
+          <p className="text-2xl font-extrabold text-amber-700 mt-1">{lotesStockCritico.length} lote(s)</p>
+        </button>
+        <button
+          type="button"
+          onClick={() => setFiltroFefo(filtroFefo === 'ALERTAS' ? 'TODOS' : 'ALERTAS')}
+          className={`text-left rounded-2xl p-4 border transition cursor-pointer ${
+            filtroFefo === 'ALERTAS' ? 'bg-rose-50 border-rose-400 shadow-sm' : 'bg-white border-slate-200 hover:border-rose-300'
+          }`}
+        >
+          <div className="flex items-center justify-between text-xs font-semibold text-rose-800">
+            <span>Por Vencer (≤ 30d FEFO)</span>
+            <AlertTriangle className="w-4 h-4 text-rose-500" />
+          </div>
+          <p className="text-2xl font-extrabold text-rose-700 mt-1">{lotesPorVencer.length} lote(s)</p>
+        </button>
+        <div className="bg-white rounded-2xl p-4 border border-slate-200">
+          <div className="text-xs font-semibold text-slate-500">Bloqueados por Vencimiento</div>
+          <p className="text-2xl font-extrabold text-slate-900 mt-1">{lotesVencidos.length} lote(s)</p>
+        </div>
+      </div>
       <Panel
         title="Escáner de Código de Barras y Consulta Rápida"
         subtitle="Consulta stock total vigente, valor unitario y lote prioritario FEFO al instante"
@@ -364,7 +407,14 @@ export function FarmaciaView({ token, lotes = [], onCreate, onPatch }) {
                     <div className="text-[11px] text-slate-500">{l.presentacion}</div>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-700 whitespace-nowrap">{l.fecha_vencimiento}</td>
-                  <td className="px-4 py-3 font-bold text-slate-900 whitespace-nowrap">{l.stock_disponible} u.</td>
+                  <td className="px-4 py-3 font-bold whitespace-nowrap">
+                    <span className={l.stock_disponible <= 5 ? 'text-rose-600' : 'text-slate-900'}>
+                      {l.stock_disponible} u.
+                    </span>
+                    {l.stock_disponible <= 5 && (
+                      <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold">Crítico</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-700 whitespace-nowrap">{l.precio_unitario ? formatClp(l.precio_unitario) : 'Pendiente'}</td>
                   <td className="px-4 py-3"><EstadoBadge estado={l.estado_fefo} /></td>
                   <td className="px-4 py-3 text-right space-x-1.5 whitespace-nowrap">
@@ -392,11 +442,12 @@ export function FarmaciaView({ token, lotes = [], onCreate, onPatch }) {
   );
 }
 
-export function CobrosView({ token, servicios = [], cuentas = [], fichas = [], onCreate, onNotify, onReload }) {
+export function CobrosView({ token, isAdmin = false, servicios = [], cuentas = [], fichas = [], onCreate, onNotify, onReload }) {
   const [servicioForm, setServicioForm] = useState({ nombre: '', precio: 15000 });
   const [fichaSeleccionada, setFichaSeleccionada] = useState('');
   const [seleccionServicios, setSeleccionServicios] = useState({});
   const [cuentaExpandida, setCuentaExpandida] = useState(null);
+  const [webpayTx, setWebpayTx] = useState(null);
   const [busy, setBusy] = useState(false);
 
   const serviciosActivos = servicios.filter((s) => s.activo);
@@ -473,8 +524,75 @@ export function CobrosView({ token, servicios = [], cuentas = [], fichas = [], o
     }
   }
 
+  async function iniciarWebpayApi(cuentaId) {
+    setBusy(true);
+    try {
+      const tx = await apiRequest(`/cuentas/${cuentaId}/iniciar-webpay/`, { method: 'POST', token });
+      setWebpayTx({ ...tx, cuentaId });
+      onNotify?.('ok', `Transacción Transbank Test iniciada (${tx.orden_compra}). Completa el pago en la pestaña Webpay y presiona Verificar.`);
+      await onReload?.();
+    } catch (err) {
+      onNotify?.('error', err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function verificarWebpayApi(cuentaId) {
+    setBusy(true);
+    try {
+      const cuenta = await apiRequest(`/cuentas/${cuentaId}/verificar-pago/`, { method: 'POST', token });
+      onNotify?.(
+        cuenta.pagada ? 'ok' : 'warn',
+        cuenta.pagada ? `Cuenta #${cuentaId} pagada y confirmada por Transbank Test.` : `Cuenta #${cuentaId}: pago aún pendiente de confirmación.`
+      );
+      if (cuenta.pagada && webpayTx?.cuentaId === cuentaId) {
+        setWebpayTx(null);
+      }
+      await onReload?.();
+    } catch (err) {
+      onNotify?.('error', err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
+      {webpayTx && (
+        <div className="bg-slate-900 text-white rounded-3xl p-6 shadow-xl border border-emerald-500/30 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="space-y-1">
+            <div className="text-xs font-bold uppercase tracking-wider text-emerald-400">Pasarela Transbank Webpay Plus (Ambiente Test)</div>
+            <h3 className="text-lg font-extrabold">Cuenta #{webpayTx.cuentaId} · {formatClp(webpayTx.monto)}</h3>
+            <p className="text-xs text-slate-300 font-mono">
+              Orden: {webpayTx.orden_compra} · Token: {String(webpayTx.token).slice(0, 18)}…
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <form action={webpayTx.url} method="POST" target="_blank" rel="noreferrer">
+              <input type="hidden" name="token_ws" value={webpayTx.token} />
+              <button type="submit" className={btnEmerald}>
+                <CreditCard className="w-4 h-4" /> Ir a Pagar en Webpay Test
+              </button>
+            </form>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => verificarWebpayApi(webpayTx.cuentaId)}
+              className="inline-flex items-center gap-1.5 text-xs px-4 py-2.5 rounded-xl bg-white text-slate-900 hover:bg-slate-100 font-bold cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" /> Verificar Pago
+            </button>
+            <button
+              type="button"
+              onClick={() => setWebpayTx(null)}
+              className="p-2 rounded-xl hover:bg-white/10 text-slate-300 cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
       <Panel
         title="Armar Cuenta con Múltiples Servicios"
         subtitle="Marca todos los servicios prestados en la atención y súmalos en un solo cobro Webpay"
@@ -544,24 +662,26 @@ export function CobrosView({ token, servicios = [], cuentas = [], fichas = [], o
         </form>
       </Panel>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Panel title="Agregar Nuevo Servicio al Catálogo" subtitle="Puedes crear todos los servicios clínicos distintos que necesites" icon={Tags}>
-          <form onSubmit={submitServicio} className="p-5 grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-            <div className="sm:col-span-2">
-              <label className="text-xs font-semibold text-slate-600">Nombre del Servicio</label>
-              <input className={inputCls} required placeholder="Ecografía Abdominal" value={servicioForm.nombre} onChange={(e) => setServicioForm({ ...servicioForm, nombre: e.target.value })} />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-600">Precio (CLP)</label>
-              <input className={inputCls} type="number" min="1" required value={servicioForm.precio} onChange={(e) => setServicioForm({ ...servicioForm, precio: e.target.value })} />
-            </div>
-            <div className="sm:col-span-3 flex justify-end pt-1">
-              <button disabled={busy} className={btnEmerald}>
-                <Plus className="w-4 h-4" /> Guardar en Catálogo
-              </button>
-            </div>
-          </form>
-        </Panel>
+      <div className={`grid grid-cols-1 ${isAdmin ? 'lg:grid-cols-2' : ''} gap-6`}>
+        {isAdmin && (
+          <Panel title="Agregar Nuevo Servicio al Catálogo" subtitle="Puedes crear todos los servicios clínicos distintos que necesites" icon={Tags}>
+            <form onSubmit={submitServicio} className="p-5 grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+              <div className="sm:col-span-2">
+                <label className="text-xs font-semibold text-slate-600">Nombre del Servicio</label>
+                <input className={inputCls} required placeholder="Ecografía Abdominal" value={servicioForm.nombre} onChange={(e) => setServicioForm({ ...servicioForm, nombre: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600">Precio (CLP)</label>
+                <input className={inputCls} type="number" min="1" required value={servicioForm.precio} onChange={(e) => setServicioForm({ ...servicioForm, precio: e.target.value })} />
+              </div>
+              <div className="sm:col-span-3 flex justify-end pt-1">
+                <button disabled={busy} className={btnEmerald}>
+                  <Plus className="w-4 h-4" /> Guardar en Catálogo
+                </button>
+              </div>
+            </form>
+          </Panel>
+        )}
 
         <Panel
           title="Portal de Pagos Webpay (Integración)"
@@ -619,9 +739,26 @@ export function CobrosView({ token, servicios = [], cuentas = [], fichas = [], o
                       >
                         {cuentaExpandida === c.id ? 'Ocultar' : 'Ver Detalle'}
                       </button>
-                      <a href={`${BACKEND_ORIGIN}/cuentas/${c.id}/`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs px-3 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 font-semibold">
-                        Pagar Webpay <ExternalLink className="w-3 h-3" />
-                      </a>
+                      {!c.pagada && !c.pagos?.some((p) => p.estado === 'INICIADO') && (
+                        <button
+                          type="button"
+                          disabled={busy || !c.total}
+                          onClick={() => iniciarWebpayApi(c.id)}
+                          className="inline-flex items-center gap-1 text-xs px-3 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 font-semibold cursor-pointer"
+                        >
+                          <CreditCard className="w-3 h-3" /> Pagar Webpay
+                        </button>
+                      )}
+                      {!c.pagada && c.pagos?.some((p) => p.estado === 'INICIADO') && (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => verificarWebpayApi(c.id)}
+                          className="inline-flex items-center gap-1 text-xs px-3 py-1 rounded-lg bg-amber-500 text-slate-950 hover:bg-amber-400 font-semibold cursor-pointer"
+                        >
+                          <RefreshCw className="w-3 h-3" /> Verificar Webpay
+                        </button>
+                      )}
                     </td>
                   </tr>
                   {cuentaExpandida === c.id && (

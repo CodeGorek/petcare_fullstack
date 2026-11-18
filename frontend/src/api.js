@@ -1,5 +1,5 @@
 export const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').replace(/\/$/, '');
-export const BACKEND_ORIGIN = API_URL.replace(/\/api$/, '');
+export const BACKEND_ORIGIN = (import.meta.env.VITE_BACKEND_URL || API_URL.replace(/\/api$/, '')).replace(/\/$/, '');
 export const S3_STATIC_URL = (import.meta.env.VITE_S3_STATIC_URL || '').replace(/\/$/, '');
 
 function formatApiError(data, status) {
@@ -64,4 +64,27 @@ export function validarRutChileno(rut) {
     return `RUT inválido (dígito verificador debería ser -${esperado}).`;
   }
   return '';
+}
+
+export function validarEmail(email) {
+  const val = String(email || '').trim();
+  if (!val) {
+    return '';
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(val)) {
+    return 'Correo electrónico inválido (ej: tutor@correo.cl).';
+  }
+  return '';
+}
+
+export function whatsappUrl(telefono, mensaje = '') {
+  let digits = String(telefono || '').replace(/\D/g, '');
+  if (digits.length === 9 && digits.startsWith('9')) {
+    digits = `56${digits}`;
+  }
+  if (digits.length < 8) {
+    return '';
+  }
+  const query = mensaje ? `?text=${encodeURIComponent(mensaje)}` : '';
+  return `https://wa.me/${digits}${query}`;
 }

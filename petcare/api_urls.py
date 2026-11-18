@@ -12,7 +12,7 @@ from cobros.views import CuentaAtencionViewSet, ServicioClinicoViewSet
 from farmacia.views import LoteMedicamentoViewSet
 from nucleo.views import api_metricas_drf, health_check
 from pacientes.views import MascotaViewSet, TutorViewSet
-from usuarios.views import UsuarioViewSet, api_login, api_logout
+from usuarios.views import NovedadPersonalViewSet, UsuarioViewSet, api_login, api_logout
 
 router = DefaultRouter()
 router.register(r'tutores', TutorViewSet)
@@ -25,6 +25,7 @@ router.register(r'recordatorios', RecordatorioVacunaViewSet)
 router.register(r'servicios', ServicioClinicoViewSet)
 router.register(r'cuentas', CuentaAtencionViewSet)
 router.register(r'usuarios', UsuarioViewSet)
+router.register(r'novedades-personal', NovedadPersonalViewSet)
 
 urlpatterns = [
     path('health/', health_check, name='api_health'),

@@ -8,6 +8,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from usuarios.permissions import IsAdminOrReadOnly
 from .forms import CitaMedicaForm, FichaClinicaForm, RecordatorioVacunaForm
 from .models import CitaMedica, FichaClinica, RecordatorioVacuna, Veterinario
 from .serializers import (
@@ -157,18 +158,22 @@ def actualizar_asistencia_recordatorio(request, pk, resultado):
 class VeterinarioViewSet(viewsets.ModelViewSet):
     queryset = Veterinario.objects.all()
     serializer_class = VeterinarioSerializer
+    permission_classes = [IsAdminOrReadOnly]
 
 
 class CitaMedicaViewSet(viewsets.ModelViewSet):
     queryset = CitaMedica.objects.select_related('mascota', 'veterinario').all()
     serializer_class = CitaMedicaSerializer
+    permission_classes = [IsAuthenticated]
 
 
 class FichaClinicaViewSet(viewsets.ModelViewSet):
     queryset = FichaClinica.objects.select_related('mascota', 'veterinario', 'medicamento_fefo').all()
     serializer_class = FichaClinicaSerializer
+    permission_classes = [IsAuthenticated]
 
 
 class RecordatorioVacunaViewSet(viewsets.ModelViewSet):
     queryset = RecordatorioVacuna.objects.select_related('mascota').all()
     serializer_class = RecordatorioVacunaSerializer
+    permission_classes = [IsAuthenticated]

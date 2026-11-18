@@ -4,12 +4,14 @@ import {
   ArrowRight,
   CalendarCheck2,
   CalendarClock,
+  CreditCard,
   FileText,
   PawPrint,
   PieChart,
   Pill,
   Users,
 } from 'lucide-react';
+import { formatClp } from '../api.js';
 import { EstadoBadge, KpiCard, Panel } from './UiParts.jsx';
 
 const PALETTE = ['#10b981', '#0ea5e9', '#8b5cf6', '#f59e0b', '#f43f5e'];
@@ -84,16 +86,40 @@ function DonutChart({ items, emptyText }) {
   );
 }
 
-export default function DashboardView({ metricas, citas = [], lotes = [], fichas = [], onNavigate }) {
+export default function DashboardView({ isAdmin = false, metricas, citas = [], lotes = [], fichas = [], cuentas = [], onNavigate }) {
   const resumen = metricas?.resumen || {};
   const especiesItems = (metricas?.especies || []).map((e) => ({ label: e.especie, value: e.total }));
   const citasItems = (metricas?.estados_citas || []).map((c) => ({ label: c.estado, value: c.total }));
 
-  const lotesCriticos = lotes.filter((l) => l.estado_fefo !== 'FEFO_NORMAL');
+  const lotesCriticos = lotes.filter((l) => l.estado_fefo !== 'FEFO_NORMAL' || l.stock_disponible <= 5);
   const lotesVista = lotesCriticos.length > 0 ? lotesCriticos : lotes;
+  const totalRecaudado = cuentas.filter((c) => c.pagada).reduce((sum, c) => sum + Number(c.total || 0), 0);
+  const cuentasPendientes = cuentas.filter((c) => !c.pagada).length;
 
   return (
     <div className="space-y-6">
+      {isAdmin && (
+        <div className="bg-slate-900 text-white rounded-2xl p-4 sm:px-6 flex flex-wrap items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center">
+              <CreditCard className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs text-slate-300 font-medium">Resumen Financiero · Solo Administrador Root</p>
+              <p className="text-sm sm:text-base font-bold">
+                Recaudado Webpay: <span className="text-emerald-400 font-mono">{formatClp(totalRecaudado)}</span> ·{' '}
+                <span className="text-amber-300">{cuentasPendientes} cuenta(s) por cobrar</span>
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => onNavigate('cobros')}
+            className="text-xs font-semibold px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+          >
+            Ir a Servicios y Cobros
+          </button>
+        </div>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <KpiCard
           title="Tutores Registrados"
@@ -237,7 +263,11 @@ export default function DashboardView({ metricas, citas = [], lotes = [], fichas
                       <div className="text-[11px] font-mono text-slate-500">{l.codigo_lote}</div>
                     </td>
                     <td className="px-4 py-3 text-xs font-mono text-slate-700 whitespace-nowrap">{l.fecha_vencimiento}</td>
-                    <td className="px-4 py-3 font-bold text-slate-900 whitespace-nowrap">{l.stock_disponible} u.</td>
+                    <td className="px-4 py-3 font-bold whitespace-nowrap">
+                      <span className={l.stock_disponible <= 5 ? 'text-rose-600' : 'text-slate-900'}>
+                        {l.stock_disponible} u.{l.stock_disponible <= 5 ? ' · Crítico' : ''}
+                      </span>
+                    </td>
                     <td className="px-4 py-3"><EstadoBadge estado={l.estado_fefo} /></td>
                   </tr>
                 ))}
