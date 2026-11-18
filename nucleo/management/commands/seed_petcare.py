@@ -49,11 +49,29 @@ class Command(BaseCommand):
 
         v1, _ = Veterinario.objects.update_or_create(
             rut='15333444-7',
-            defaults={'nombre': 'Valentina Herrera', 'especialidad': 'GENERAL', 'email': 'vherrera@petcare.cl', 'hora_inicio': time(9, 0), 'hora_fin': time(18, 0), 'activo': True}
+            defaults={
+                'nombre': 'Valentina Herrera',
+                'especialidad': 'GENERAL',
+                'email': 'vherrera@petcare.cl',
+                'telefono': '+56987001122',
+                'fecha_ingreso': date(2025, 3, 1),
+                'hora_inicio': time(9, 0),
+                'hora_fin': time(18, 0),
+                'activo': True,
+            }
         )
         v2, _ = Veterinario.objects.update_or_create(
             rut='14222888-2',
-            defaults={'nombre': 'Sebastián Valdés', 'especialidad': 'CIRUGIA', 'email': 'svaldes@petcare.cl', 'hora_inicio': time(10, 0), 'hora_fin': time(19, 0), 'activo': True}
+            defaults={
+                'nombre': 'Sebastián Valdés',
+                'especialidad': 'CIRUGIA',
+                'email': 'svaldes@petcare.cl',
+                'telefono': '+56977553311',
+                'fecha_ingreso': date(2025, 4, 15),
+                'hora_inicio': time(10, 0),
+                'hora_fin': time(19, 0),
+                'activo': True,
+            }
         )
 
         hoy = date.today()

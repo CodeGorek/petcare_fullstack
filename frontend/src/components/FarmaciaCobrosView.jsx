@@ -98,8 +98,12 @@ export function FarmaciaView({ token, lotes = [], onCreate, onPatch }) {
 
   async function iniciarCamara() {
     setErrorCamara('');
-    if (!('BarcodeDetector' in window) || !navigator.mediaDevices?.getUserMedia) {
-      setErrorCamara('Tu navegador no soporta detección por cámara; usa el lector USB o escribe el código.');
+    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+      setErrorCamara('La cámara web requiere conexión HTTPS segura (ahora estás en HTTP). Usa un lector USB/Bluetooth HID o escribe el código manualmente.');
+      return;
+    }
+    if (!('BarcodeDetector' in window)) {
+      setErrorCamara('Este navegador de escritorio no tiene detector de barras nativo; usa lector USB/Bluetooth HID o ingresa el código.');
       return;
     }
     try {
@@ -160,6 +164,9 @@ export function FarmaciaView({ token, lotes = [], onCreate, onPatch }) {
   const lotesStockCritico = lotes.filter((l) => l.stock_disponible <= 5 && l.estado_fefo !== 'BLOQUEADO_VENCIDO');
   const lotesPorVencer = lotes.filter((l) => l.estado_fefo === 'PRIORIDAD_FEFO_ALTA');
   const lotesVencidos = lotes.filter((l) => l.estado_fefo === 'BLOQUEADO_VENCIDO');
+  const stockTotalBodega = lotes
+    .filter((l) => l.estado_fefo !== 'BLOQUEADO_VENCIDO')
+    .reduce((sum, l) => sum + Number(l.stock_disponible || 0), 0);
 
   const lotesFiltrados = lotes.filter((l) => {
     const matchTexto =
@@ -378,7 +385,7 @@ export function FarmaciaView({ token, lotes = [], onCreate, onPatch }) {
 
       <Panel
         title="Inventario FEFO"
-        subtitle={`${lotesFiltrados.length} lotes registrados`}
+        subtitle={`${lotesFiltrados.length} lote(s) · Existencia vigente en bodega: ${stockTotalBodega} unidades`}
         icon={Pill}
         action={<SearchBar value={busqueda} onChange={setBusqueda} placeholder="Buscar código barras, lote o fármaco..." />}
       >
@@ -389,10 +396,10 @@ export function FarmaciaView({ token, lotes = [], onCreate, onPatch }) {
                 <th className="px-4 py-3">Lote / Barras</th>
                 <th className="px-4 py-3">Producto</th>
                 <th className="px-4 py-3">Vencimiento</th>
-                <th className="px-4 py-3">Stock</th>
+                <th className="px-4 py-3">Stock Guardado</th>
                 <th className="px-4 py-3">Precio</th>
                 <th className="px-4 py-3">Prioridad FEFO</th>
-                <th className="px-4 py-3 text-right">Stock</th>
+                <th className="px-4 py-3 text-right">Ajuste Rápido</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

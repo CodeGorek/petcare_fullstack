@@ -42,6 +42,29 @@ export async function apiRequest(endpoint, { method = 'GET', token = '', body = 
   return data;
 }
 
+export async function apiUploadFile(endpoint, { token = '', file, fieldName = 'foto' } = {}) {
+  const formData = new FormData();
+  formData.append(fieldName, file);
+  const headers = {};
+  if (token) {
+    headers.Authorization = `Token ${token}`;
+  }
+
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(formatApiError(data, response.status));
+    error.status = response.status;
+    throw error;
+  }
+  return data;
+}
+
 export function formatClp(valor) {
   return `$${Number(valor || 0).toLocaleString('es-CL')}`;
 }
@@ -87,4 +110,12 @@ export function whatsappUrl(telefono, mensaje = '') {
   }
   const query = mensaje ? `?text=${encodeURIComponent(mensaje)}` : '';
   return `https://wa.me/${digits}${query}`;
+}
+
+export function resolveMediaUrl(url) {
+  const val = String(url || '').trim();
+  if (!val) return '';
+  if (val.startsWith('http://') || val.startsWith('https://')) return val;
+  if (val.startsWith('/api/')) return `${API_URL}${val.slice(4)}`;
+  return `${BACKEND_ORIGIN}${val.startsWith('/') ? val : `/${val}`}`;
 }

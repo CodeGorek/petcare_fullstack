@@ -16,8 +16,10 @@ class CrearProfesionalForm(BootstrapFormMixin, forms.Form):
     nombre_completo = forms.CharField(label='Nombre y Apellido Profesional', max_length=120, widget=forms.TextInput(attrs={'placeholder': 'Ej: Sebastián Valdés'}))
     rut = forms.CharField(label='RUT Profesional', max_length=12, validators=[validar_rut_chileno], widget=forms.TextInput(attrs={'placeholder': '14222888-1', 'class': 'form-control rut-input'}))
     email = forms.EmailField(label='Correo Institucional', widget=forms.EmailInput(attrs={'placeholder': 'profesional@petcare.cl'}))
+    telefono = forms.CharField(label='WhatsApp / Teléfono', max_length=20, required=False, initial='+569', widget=forms.TextInput(attrs={'placeholder': '+56912345678'}))
     rol = forms.ChoiceField(label='Rol en el Sistema', choices=ROL_CHOICES)
     especialidad = forms.ChoiceField(label='Especialidad Médica', choices=Veterinario.ESPECIALIDADES, required=False)
+    fecha_ingreso = forms.DateField(label='Fecha de Ingreso', required=False, widget=forms.DateInput(attrs={'type': 'date'}))
     hora_inicio = forms.TimeField(label='Inicio Jornada', initial='09:00', widget=forms.TimeInput(attrs={'type': 'time'}))
     hora_fin = forms.TimeField(label='Fin Jornada', initial='18:00', widget=forms.TimeInput(attrs={'type': 'time'}))
 

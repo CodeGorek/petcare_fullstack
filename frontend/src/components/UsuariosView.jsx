@@ -3,6 +3,7 @@ import {
   CalendarClock,
   ClipboardCheck,
   Clock,
+  MessageCircle,
   Power,
   ShieldCheck,
   Trash2,
@@ -10,7 +11,7 @@ import {
   UserPlus,
   Users,
 } from 'lucide-react';
-import { apiRequest, validarEmail, validarRutChileno } from '../api.js';
+import { apiRequest, validarEmail, validarRutChileno, whatsappUrl } from '../api.js';
 import { EstadoBadge, Panel, SearchBar, btnEmerald, inputCls } from './UiParts.jsx';
 
 const ESTADO_LABORAL_STYLE = {
@@ -54,8 +55,10 @@ export default function UsuariosView({
     nombre_completo: '',
     rut: '',
     email: '',
+    telefono: '+569',
     rol: 'VETERINARIO',
     especialidad: 'GENERAL',
+    fecha_ingreso: hoy,
     hora_inicio: '09:00',
     hora_fin: '18:00',
   });
@@ -109,8 +112,10 @@ export default function UsuariosView({
         nombre_completo: '',
         rut: '',
         email: '',
+        telefono: '+569',
         rol: 'VETERINARIO',
         especialidad: 'GENERAL',
+        fecha_ingreso: hoy,
         hora_inicio: '09:00',
         hora_fin: '18:00',
       });
@@ -262,6 +267,15 @@ export default function UsuariosView({
               {emailError && <p className="text-[11px] text-rose-600 mt-1">{emailError}</p>}
             </div>
             <div>
+              <label className="text-xs font-semibold text-slate-600">WhatsApp / Teléfono Especialista</label>
+              <input
+                className={inputCls}
+                placeholder="+56912345678"
+                value={form.telefono}
+                onChange={(e) => setForm({ ...form, telefono: e.target.value })}
+              />
+            </div>
+            <div>
               <label className="text-xs font-semibold text-slate-600">Rol en el Sistema</label>
               <select className={inputCls} value={form.rol} onChange={(e) => setForm({ ...form, rol: e.target.value })}>
                 <option value="VETERINARIO">Médico Veterinario (Con Agenda)</option>
@@ -279,13 +293,17 @@ export default function UsuariosView({
                     <option value="EXOTICOS">Medicina de Exóticos</option>
                   </select>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-slate-600">Fecha de Ingreso</label>
+                  <input className={inputCls} type="date" value={form.fecha_ingreso} onChange={(e) => setForm({ ...form, fecha_ingreso: e.target.value })} />
+                </div>
+                <div className="sm:col-span-2 grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-xs font-semibold text-slate-600">Inicio</label>
+                    <label className="text-xs font-semibold text-slate-600">Horario Inicio</label>
                     <input className={inputCls} type="time" value={form.hora_inicio} onChange={(e) => setForm({ ...form, hora_inicio: e.target.value })} />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-slate-600">Fin</label>
+                    <label className="text-xs font-semibold text-slate-600">Horario Fin</label>
                     <input className={inputCls} type="time" value={form.hora_fin} onChange={(e) => setForm({ ...form, hora_fin: e.target.value })} />
                   </div>
                 </div>
@@ -414,6 +432,19 @@ export default function UsuariosView({
                   <td className="px-4 py-3">
                     <div className="font-medium text-slate-800">{u.first_name || '—'}</div>
                     <div className="text-xs text-slate-500">{u.email || '—'}</div>
+                    {u.veterinario_fecha_ingreso && (
+                      <div className="text-[11px] font-mono text-slate-400">Ingreso: {u.veterinario_fecha_ingreso}</div>
+                    )}
+                    {whatsappUrl(u.veterinario_telefono, `Hola ${u.first_name || u.username}, coordinación Clínica PetCare.`) && (
+                      <a
+                        href={whatsappUrl(u.veterinario_telefono, `Hola ${u.first_name || u.username}, coordinación Clínica PetCare.`)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:underline mt-0.5"
+                      >
+                        <MessageCircle className="w-3 h-3" /> {u.veterinario_telefono}
+                      </a>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     {u.is_superuser ? (

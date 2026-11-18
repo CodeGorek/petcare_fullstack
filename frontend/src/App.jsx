@@ -104,9 +104,10 @@ export default function App() {
   async function handleCreate(endpoint, body, successMsg) {
     setAviso(null);
     try {
-      await apiRequest(endpoint, { method: 'POST', token, body });
+      const created = await apiRequest(endpoint, { method: 'POST', token, body });
       setAviso({ tipo: 'ok', texto: successMsg });
       await cargarTodo(token, user);
+      return created;
     } catch (err) {
       setAviso({ tipo: 'error', texto: err.message });
       throw err;
@@ -279,6 +280,7 @@ export default function App() {
           )}
           {modulo === 'pacientes' && (
             <PacientesView
+              token={token}
               tutores={datos.tutores}
               mascotas={datos.mascotas}
               citas={datos.citas}
@@ -286,6 +288,8 @@ export default function App() {
               recordatorios={datos.recordatorios}
               onCreate={handleCreate}
               onPatch={handlePatch}
+              onNotify={handleNotify}
+              onReload={() => cargarTodo(token, user)}
             />
           )}
           {modulo === 'agenda' && (

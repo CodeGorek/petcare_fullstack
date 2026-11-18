@@ -330,7 +330,7 @@ export function FichasView({ mascotas = [], veterinarios = [], lotes = [], ficha
             <textarea className={inputCls} rows={2} required value={form.tratamiento} onChange={(e) => setForm({ ...form, tratamiento: e.target.value })} />
           </div>
           <div className="sm:col-span-2">
-            <label className="text-xs font-semibold text-slate-600">Dispensación Farmacia FEFO</label>
+            <label className="text-xs font-semibold text-slate-600">Medicamento / Insumo Utilizado (Orden FEFO)</label>
             <select className={inputCls} value={form.medicamento_fefo} onChange={(e) => setForm({ ...form, medicamento_fefo: e.target.value })}>
               <option value="">-- Sin dispensación de farmacia --</option>
               {lotesDisponibles.map((l) => (

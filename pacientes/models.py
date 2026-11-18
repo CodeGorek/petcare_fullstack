@@ -57,7 +57,8 @@ class Mascota(models.Model):
         validators=[MinValueValidator(Decimal('0.10')), MaxValueValidator(Decimal('120.00'))]
     )
     alergias_conocidas = models.TextField('Alergias / Observaciones', blank=True)
-    foto_url = models.URLField('URL Foto (S3 / CDN)', max_length=500, blank=True)
+    microchip = models.CharField('Microchip RFID (15 dígitos ISO)', max_length=32, blank=True)
+    foto_url = models.CharField('Ruta o URL Foto (Archivo / S3 / CDN)', max_length=500, blank=True)
     activo = models.BooleanField('Paciente Activo', default=True)
 
     class Meta:
@@ -68,6 +69,8 @@ class Mascota(models.Model):
     def clean(self):
         if self.fecha_nacimiento and self.fecha_nacimiento > date.today():
             raise ValidationError({'fecha_nacimiento': 'La fecha de nacimiento no puede estar en el futuro.'})
+        if self.foto_url and not self.foto_url.startswith(('/api/', 'https://', 'http://')):
+            raise ValidationError({'foto_url': 'La ruta de imagen debe iniciar con /api/, https:// o http://.'})
 
     def save(self, *args, **kwargs):
         self.full_clean()

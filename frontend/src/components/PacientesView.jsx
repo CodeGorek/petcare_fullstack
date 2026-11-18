@@ -1,9 +1,27 @@
-import { useState } from 'react';
-import { FolderOpen, Mail, MapPin, MessageCircle, PawPrint, Phone, Plus, Power, Printer, UserPlus, Users, X } from 'lucide-react';
-import { validarEmail, validarRutChileno, whatsappUrl } from '../api.js';
+import { useRef, useState } from 'react';
+import {
+  Camera,
+  Cpu,
+  FolderOpen,
+  Mail,
+  MapPin,
+  MessageCircle,
+  PawPrint,
+  Phone,
+  Plus,
+  Power,
+  Printer,
+  Search,
+  Upload,
+  UserPlus,
+  Users,
+  X,
+} from 'lucide-react';
+import { apiRequest, apiUploadFile, resolveMediaUrl, validarEmail, validarRutChileno, whatsappUrl } from '../api.js';
 import { EstadoBadge, Panel, SearchBar, btnEmerald, inputCls } from './UiParts.jsx';
 
 export default function PacientesView({
+  token = '',
   tutores = [],
   mascotas = [],
   citas = [],
@@ -11,11 +29,20 @@ export default function PacientesView({
   recordatorios = [],
   onCreate,
   onPatch,
+  onNotify,
+  onReload,
 }) {
   const [busqueda, setBusqueda] = useState('');
   const [rutError, setRutError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [expedienteMascota, setExpedienteMascota] = useState(null);
+  const [lectorChipActivo, setLectorChipActivo] = useState(false);
+  const [chipScan, setChipScan] = useState('');
+  const [resultadoChip, setResultadoChip] = useState(null);
+  const [fotoArchivoForm, setFotoArchivoForm] = useState(null);
+  const [fotoPreviewForm, setFotoPreviewForm] = useState('');
+  const [fotoArchivoExp, setFotoArchivoExp] = useState(null);
+  const formNombreRef = useRef(null);
   const [tutorForm, setTutorForm] = useState({
     rut: '',
     nombre_completo: '',
@@ -32,9 +59,21 @@ export default function PacientesView({
     fecha_nacimiento: '2022-01-01',
     peso_kg: '10.0',
     alergias_conocidas: '',
-    foto_url: '',
+    microchip: '',
   });
   const [busy, setBusy] = useState(false);
+
+  async function buscarChipRfid(e) {
+    if (e) e.preventDefault();
+    const codigo = chipScan.trim();
+    if (!codigo) return;
+    try {
+      const res = await apiRequest(`/mascotas/buscar-chip/?chip=${encodeURIComponent(codigo)}`, { token });
+      setResultadoChip(res);
+    } catch {
+      setResultadoChip({ encontrado: false, chip_consultado: codigo, mascota: null });
+    }
+  }
 
   async function submitTutor(e) {
     e.preventDefault();
@@ -60,8 +99,22 @@ export default function PacientesView({
     e.preventDefault();
     setBusy(true);
     try {
-      await onCreate('/mascotas/', { ...mascotaForm, tutor: Number(mascotaForm.tutor) }, 'Mascota registrada correctamente.');
-      setMascotaForm((m) => ({ ...m, nombre: '', raza: '', alergias_conocidas: '', foto_url: '' }));
+      const creada = await onCreate(
+        '/mascotas/',
+        { ...mascotaForm, tutor: Number(mascotaForm.tutor) },
+        'Mascota registrada correctamente.'
+      );
+      if (fotoArchivoForm && creada?.id) {
+        await apiUploadFile(`/mascotas/${creada.id}/subir-foto/`, { token, file: fotoArchivoForm });
+        onNotify?.('ok', `Paciente ${creada.nombre} y fotografía cargados correctamente.`);
+        await onReload?.();
+      }
+      setMascotaForm((m) => ({ ...m, nombre: '', raza: '', alergias_conocidas: '', microchip: '' }));
+      setFotoArchivoForm(null);
+      if (fotoPreviewForm) URL.revokeObjectURL(fotoPreviewForm);
+      setFotoPreviewForm('');
+    } catch (err) {
+      onNotify?.('error', err.message);
     } finally {
       setBusy(false);
     }
@@ -76,27 +129,140 @@ export default function PacientesView({
   );
   const tutoresActivos = tutores.filter((t) => t.activo);
 
-  const citasExp = expedienteMascota ? citas.filter((c) => c.mascota === expedienteMascota.id) : [];
-  const fichasExp = expedienteMascota ? fichas.filter((f) => f.mascota === expedienteMascota.id) : [];
-  const recExp = expedienteMascota ? recordatorios.filter((r) => r.mascota === expedienteMascota.id) : [];
-  const tutorExp = expedienteMascota ? tutores.find((t) => t.id === expedienteMascota.tutor) : null;
+  const mascotaExp = expedienteMascota
+    ? (mascotas.find((m) => m.id === expedienteMascota.id) || expedienteMascota)
+    : null;
+  const citasExp = mascotaExp ? citas.filter((c) => c.mascota === mascotaExp.id) : [];
+  const fichasExp = mascotaExp ? fichas.filter((f) => f.mascota === mascotaExp.id) : [];
+  const recExp = mascotaExp ? recordatorios.filter((r) => r.mascota === mascotaExp.id) : [];
+  const tutorExp = mascotaExp ? tutores.find((t) => t.id === mascotaExp.tutor) : null;
   const waExp = tutorExp
-    ? whatsappUrl(tutorExp.telefono, `Hola ${tutorExp.nombre_completo}, te escribimos de Clínica PetCare por el expediente de ${expedienteMascota?.nombre}.`)
+    ? whatsappUrl(tutorExp.telefono, `Hola ${tutorExp.nombre_completo}, te escribimos de Clínica PetCare por el expediente de ${mascotaExp?.nombre}.`)
     : '';
+
+  async function guardarFotoExpediente(e) {
+    e.preventDefault();
+    if (!mascotaExp || !fotoArchivoExp) {
+      onNotify?.('error', 'Selecciona una imagen desde tu dispositivo o teléfono.');
+      return;
+    }
+    setBusy(true);
+    try {
+      await apiUploadFile(`/mascotas/${mascotaExp.id}/subir-foto/`, { token, file: fotoArchivoExp });
+      onNotify?.('ok', `Foto de ${mascotaExp.nombre} subida correctamente al expediente.`);
+      setFotoArchivoExp(null);
+      await onReload?.();
+    } catch (err) {
+      onNotify?.('error', err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
-      {expedienteMascota && (
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
+            <Cpu className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-slate-900">Lector Rápido de Microchip RFID (Opción Pistola 134.2 kHz USB/Bluetooth)</h3>
+            <p className="text-xs text-slate-500">Escanea el chip ISO (15 dígitos) para abrir el expediente o pre-llenar un nuevo ingreso.</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setLectorChipActivo((v) => !v)}
+          className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-xl border transition cursor-pointer ${
+            lectorChipActivo ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+          }`}
+        >
+          <Cpu className="w-3.5 h-3.5" /> {lectorChipActivo ? 'Ocultar Lector Chip' : 'Activar Lector Chip'}
+        </button>
+      </div>
+
+      {lectorChipActivo && (
+        <Panel title="Lectura RFID de Microchip Animal" subtitle="Acerca el lector RFID USB/Bluetooth con el cursor en la casilla" icon={Cpu}>
+          <div className="p-5 space-y-3">
+            <form onSubmit={buscarChipRfid} className="flex flex-col sm:flex-row gap-2.5">
+              <input
+                type="text"
+                autoFocus
+                className={`${inputCls} font-mono flex-1`}
+                placeholder="Escanea o escribe el código RFID de 15 dígitos (ej: 900012345678901)"
+                value={chipScan}
+                onChange={(e) => setChipScan(e.target.value)}
+              />
+              <button type="submit" className={btnEmerald}>
+                <Search className="w-4 h-4" /> Buscar Microchip
+              </button>
+            </form>
+            {resultadoChip && (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 flex flex-wrap items-center justify-between gap-3">
+                {resultadoChip.encontrado && resultadoChip.mascota ? (
+                  <>
+                    <div>
+                      <p className="text-xs font-bold uppercase text-emerald-700">Microchip Registrado</p>
+                      <p className="text-sm font-bold text-slate-900">
+                        {resultadoChip.mascota.nombre} · {resultadoChip.mascota.especie} ({resultadoChip.mascota.raza})
+                      </p>
+                      <p className="text-xs text-slate-500">Tutor: {resultadoChip.mascota.tutor_nombre}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setExpedienteMascota(resultadoChip.mascota)}
+                      className={btnEmerald}
+                    >
+                      <FolderOpen className="w-4 h-4" /> Abrir Expediente
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-slate-700">
+                      El chip <span className="font-mono font-bold">{resultadoChip.chip_consultado}</span> aún no pertenece a un paciente.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMascotaForm((f) => ({ ...f, microchip: resultadoChip.chip_consultado }));
+                        formNombreRef.current?.focus();
+                      }}
+                      className={btnEmerald}
+                    >
+                      <Plus className="w-4 h-4" /> Usar para Registro Rápido
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </Panel>
+      )}
+      {mascotaExp && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-900 text-white rounded-t-3xl">
-              <div>
-                <h3 className="font-bold text-base">Expediente Clínico · {expedienteMascota.nombre}</h3>
-                <p className="text-xs text-slate-300">
-                  {expedienteMascota.especie} · {expedienteMascota.raza} · Peso: {expedienteMascota.peso_kg} kg · Tutor: {expedienteMascota.tutor_nombre}
-                </p>
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-4 bg-slate-900 text-white rounded-t-3xl">
+              <div className="flex items-center gap-3.5 min-w-0">
+                {mascotaExp.foto_url ? (
+                  <img
+                    src={resolveMediaUrl(mascotaExp.foto_url)}
+                    alt={mascotaExp.nombre}
+                    className="w-14 h-14 rounded-2xl object-cover border border-white/20 shrink-0 bg-slate-800"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-2xl bg-white/10 text-emerald-300 flex items-center justify-center shrink-0">
+                    <PawPrint className="w-6 h-6" />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <h3 className="font-bold text-base truncate">Expediente Clínico · {mascotaExp.nombre}</h3>
+                  <p className="text-xs text-slate-300 truncate">
+                    {mascotaExp.especie} · {mascotaExp.raza} · Peso: {mascotaExp.peso_kg} kg · Tutor: {mascotaExp.tutor_nombre}
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 {waExp && (
                   <a
                     href={waExp}
@@ -116,9 +282,41 @@ export default function PacientesView({
               </div>
             </div>
             <div className="p-6 space-y-5 text-sm">
-              {expedienteMascota.alergias_conocidas && (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                {mascotaExp.foto_url ? (
+                  <a href={resolveMediaUrl(mascotaExp.foto_url)} target="_blank" rel="noreferrer" className="shrink-0">
+                    <img
+                      src={resolveMediaUrl(mascotaExp.foto_url)}
+                      alt={mascotaExp.nombre}
+                      className="w-24 h-24 rounded-2xl object-cover border border-slate-200 shadow-xs bg-white"
+                    />
+                  </a>
+                ) : (
+                  <div className="w-24 h-24 rounded-2xl border border-dashed border-slate-300 bg-white text-slate-400 flex flex-col items-center justify-center gap-1 shrink-0">
+                    <Camera className="w-5 h-5" />
+                    <span className="text-[10px] font-medium">Sin foto aún</span>
+                  </div>
+                )}
+                <form onSubmit={guardarFotoExpediente} className="flex-1 w-full space-y-2">
+                  <label className="text-xs font-bold text-slate-700 block">
+                    Subir Fotografía Directa de {mascotaExp.nombre} (Cámara / WhatsApp / Galería)
+                  </label>
+                  <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="block w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-800 cursor-pointer"
+                      onChange={(e) => setFotoArchivoExp(e.target.files?.[0] || null)}
+                    />
+                    <button type="submit" disabled={busy || !fotoArchivoExp} className={`${btnEmerald} whitespace-nowrap`}>
+                      <Upload className="w-4 h-4" /> Subir Foto
+                    </button>
+                  </div>
+                </form>
+              </div>
+              {mascotaExp.alergias_conocidas && (
                 <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs">
-                  <strong>Alergias / Observaciones:</strong> {expedienteMascota.alergias_conocidas}
+                  <strong>Alergias / Observaciones:</strong> {mascotaExp.alergias_conocidas}
                 </div>
               )}
 
@@ -241,7 +439,7 @@ export default function PacientesView({
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-600">Nombre</label>
-              <input className={inputCls} required placeholder="Thor" value={mascotaForm.nombre} onChange={(e) => setMascotaForm({ ...mascotaForm, nombre: e.target.value })} />
+              <input ref={formNombreRef} className={inputCls} required placeholder="Thor" value={mascotaForm.nombre} onChange={(e) => setMascotaForm({ ...mascotaForm, nombre: e.target.value })} />
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-600">Especie</label>
@@ -273,9 +471,35 @@ export default function PacientesView({
               <label className="text-xs font-semibold text-slate-600">Alergias</label>
               <input className={inputCls} placeholder="Opcional" value={mascotaForm.alergias_conocidas} onChange={(e) => setMascotaForm({ ...mascotaForm, alergias_conocidas: e.target.value })} />
             </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-600">Microchip RFID (opcional)</label>
+              <input
+                className={`${inputCls} font-mono`}
+                placeholder="Ej: 900012345678901"
+                value={mascotaForm.microchip}
+                onChange={(e) => setMascotaForm({ ...mascotaForm, microchip: e.target.value })}
+              />
+            </div>
             <div className="sm:col-span-2">
-              <label className="text-xs font-semibold text-slate-600">URL Foto S3 / CDN (opcional)</label>
-              <input className={inputCls} type="url" placeholder="https://tu-bucket.s3.amazonaws.com/fotos/thor.jpg" value={mascotaForm.foto_url} onChange={(e) => setMascotaForm({ ...mascotaForm, foto_url: e.target.value })} />
+              <label className="text-xs font-semibold text-slate-600 block mb-1">
+                Subir Fotografía Directa (desde móvil, cámara o imágenes de WhatsApp)
+              </label>
+              <div className="flex items-center gap-3">
+                {fotoPreviewForm && (
+                  <img src={fotoPreviewForm} alt="Vista previa" className="w-11 h-11 rounded-xl object-cover border border-slate-200 shrink-0" />
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="block w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-800 cursor-pointer"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null;
+                    setFotoArchivoForm(file);
+                    if (fotoPreviewForm) URL.revokeObjectURL(fotoPreviewForm);
+                    setFotoPreviewForm(file ? URL.createObjectURL(file) : '');
+                  }}
+                />
+              </div>
             </div>
             <div className="sm:col-span-2 flex justify-end pt-1">
               <button disabled={busy} className={btnEmerald}>
@@ -310,13 +534,16 @@ export default function PacientesView({
                   <td className="px-4 py-3 font-semibold text-slate-900">
                     <div className="flex items-center gap-2.5">
                       {m.foto_url ? (
-                        <img src={m.foto_url} alt={m.nombre} className="w-8 h-8 rounded-lg object-cover border border-slate-200" />
+                        <img src={resolveMediaUrl(m.foto_url)} alt={m.nombre} className="w-8 h-8 rounded-lg object-cover border border-slate-200" />
                       ) : (
                         <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center">
                           <PawPrint className="w-4 h-4" />
                         </div>
                       )}
-                      <span>{m.nombre}</span>
+                      <div>
+                        <span>{m.nombre}</span>
+                        {m.microchip && <div className="text-[10px] font-mono text-slate-400">Chip: {m.microchip}</div>}
+                      </div>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-slate-600">{m.especie} · {m.raza}</td>
@@ -325,7 +552,10 @@ export default function PacientesView({
                   <td className="px-4 py-3"><EstadoBadge estado={m.activo ? 'ACTIVO' : 'INACTIVO'} /></td>
                   <td className="px-4 py-3 text-right space-x-1.5 whitespace-nowrap">
                     <button
-                      onClick={() => setExpedienteMascota(m)}
+                      onClick={() => {
+                        setExpedienteMascota(m);
+                        setFotoArchivoExp(null);
+                      }}
                       className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-semibold cursor-pointer"
                     >
                       <FolderOpen className="w-3.5 h-3.5" /> Expediente

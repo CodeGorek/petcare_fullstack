@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
+from agenda.models import Veterinario
 from .models import NovedadPersonal
 
 
@@ -41,6 +42,8 @@ class NovedadPersonalSerializer(serializers.ModelSerializer):
 class UsuarioSerializer(serializers.ModelSerializer):
     estado_laboral = serializers.SerializerMethodField()
     ultima_novedad = serializers.SerializerMethodField()
+    veterinario_telefono = serializers.SerializerMethodField()
+    veterinario_fecha_ingreso = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -55,8 +58,25 @@ class UsuarioSerializer(serializers.ModelSerializer):
             'is_active',
             'estado_laboral',
             'ultima_novedad',
+            'veterinario_telefono',
+            'veterinario_fecha_ingreso',
         ]
         read_only_fields = fields
+
+    def _veterinario_asociado(self, obj):
+        if not hasattr(obj, '_cached_vet'):
+            obj._cached_vet = (
+                Veterinario.objects.filter(email=obj.email).first() if obj.email else None
+            )
+        return obj._cached_vet
+
+    def get_veterinario_telefono(self, obj):
+        vet = self._veterinario_asociado(obj)
+        return vet.telefono if vet else ''
+
+    def get_veterinario_fecha_ingreso(self, obj):
+        vet = self._veterinario_asociado(obj)
+        return str(vet.fecha_ingreso) if vet and vet.fecha_ingreso else None
 
     def _novedad_reciente(self, obj):
         if not hasattr(obj, '_cached_ultima_novedad'):

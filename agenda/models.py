@@ -20,6 +20,8 @@ class Veterinario(models.Model):
     rut = models.CharField('RUT', max_length=12, unique=True, validators=[validar_rut_chileno])
     especialidad = models.CharField('Especialidad', max_length=30, choices=ESPECIALIDADES, default='GENERAL')
     email = models.EmailField('Correo', unique=True)
+    telefono = models.CharField('WhatsApp / Teléfono', max_length=20, blank=True, default='')
+    fecha_ingreso = models.DateField('Fecha de Ingreso', null=True, blank=True)
     hora_inicio = models.TimeField('Inicio Jornada', default='09:00')
     hora_fin = models.TimeField('Fin Jornada', default='18:00')
     activo = models.BooleanField('Disponible en Agenda', default=True)

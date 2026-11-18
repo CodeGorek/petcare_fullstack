@@ -57,6 +57,8 @@ class UsuariosTests(TestCase):
                 'nombre_completo': 'Dr. Carlos Méndez',
                 'rut': '18456789-K',
                 'email': 'cmendez@petcare.cl',
+                'telefono': '+56999887766',
+                'fecha_ingreso': str(date.today()),
                 'rol': 'VETERINARIO',
                 'especialidad': 'CIRUGIA',
                 'hora_inicio': '09:00',
@@ -65,8 +67,10 @@ class UsuariosTests(TestCase):
             content_type='application/json',
         )
         self.assertEqual(creado.status_code, 201)
+        self.assertEqual(creado.json()['veterinario_telefono'], '+56999887766')
+        self.assertEqual(creado.json()['veterinario_fecha_ingreso'], str(date.today()))
         self.assertTrue(User.objects.filter(username='dr.nuevo', is_superuser=False).exists())
-        self.assertTrue(Veterinario.objects.filter(rut='18456789-K', especialidad='CIRUGIA').exists())
+        self.assertTrue(Veterinario.objects.filter(rut='18456789-K', especialidad='CIRUGIA', telefono='+56999887766').exists())
 
         nuevo_id = creado.json()['id']
         toggled = self.client.post(f'/api/usuarios/{nuevo_id}/toggle-activo/')

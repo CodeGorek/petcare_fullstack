@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
   BellRing,
   CalendarClock,
-  Code2,
   CreditCard,
   Database,
   ExternalLink,
@@ -17,7 +16,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { API_URL, BACKEND_ORIGIN, S3_STATIC_URL } from '../api.js';
+import { BACKEND_ORIGIN, S3_STATIC_URL } from '../api.js';
 import { BrandMark } from './UiParts.jsx';
 
 const NAV_ITEMS = [
@@ -122,7 +121,7 @@ export default function Layout({ modulo, setModulo, user, health, refreshing, on
         {esRoot && (
           <div className="px-3 mt-4 pt-3 border-t border-white/5">
             <div className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-              Infraestructura & Admin
+              Administración Avanzada
             </div>
             <a
               href={`${BACKEND_ORIGIN}/admin/`}
@@ -132,19 +131,7 @@ export default function Layout({ modulo, setModulo, user, health, refreshing, on
             >
               <span className="flex items-center gap-2.5">
                 <ShieldCheck className="w-4 h-4 text-slate-400" />
-                Django Admin
-              </span>
-              <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-            </a>
-            <a
-              href={`${API_URL}/`}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center justify-between px-3.5 py-2 rounded-xl text-xs text-slate-300 hover:bg-white/5 hover:text-white transition"
-            >
-              <span className="flex items-center gap-2.5">
-                <Code2 className="w-4 h-4 text-slate-400" />
-                API REST (DRF)
+                Panel Técnico Django
               </span>
               <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
             </a>
