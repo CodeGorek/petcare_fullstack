@@ -16,7 +16,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { BACKEND_ORIGIN, S3_STATIC_URL } from '../api.js';
+import { API_URL, BACKEND_ORIGIN, S3_STATIC_URL } from '../api.js';
 import { BrandMark } from './UiParts.jsx';
 
 const NAV_ITEMS = [
@@ -193,7 +193,11 @@ export default function Layout({ modulo, setModulo, user, health, refreshing, on
                 Centro de Control Clínico y Trazabilidad FEFO
               </h1>
               <p className="text-[11px] text-slate-500 hidden sm:block truncate">
-                Arquitectura modular AWS · API: <span className="font-mono">{API_URL}</span>
+                {esRoot ? (
+                  <>Arquitectura modular AWS · API: <span className="font-mono">{API_URL}</span></>
+                ) : (
+                  'Suite Clínica Veterinaria · Expediente, Agenda y Farmacia FEFO'
+                )}
               </p>
             </div>
           </div>
